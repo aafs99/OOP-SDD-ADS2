@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Postfix++ Calculator
+ * Postfix++ Calculator - Interactive Terminal Version
+ * A stack-based calculator for evaluating postfix arithmetic expressions with variables
+ * Usage: node calculator.js [expression] or run interactively
  */
 
 const readline = require('readline');
@@ -47,17 +49,13 @@ class PostfixCalculator {
     _processToken(token) {
         if (this._isNumber(token)) {
             this.stack.push(parseFloat(token));
-        }
-        else if (this.operators.has(token)) {
+        } else if (this.operators.has(token)) {
             this._handleOperator(token);
-        }
-        else if (token === '=') {
+        } else if (token === '=') {
             this._handleAssignment();
-        }
-        else if (this._isValidVariable(token)) {
+        } else if (this._isValidVariable(token)) {
             this._handleVariable(token);
-        }
-        else {
+        } else {
             throw new Error(`Invalid token: '${token}'. Variables must be A-Z.`);
         }
     }
@@ -209,7 +207,6 @@ class PostfixCalculator {
  */
 function loadVariables() {
     const stateFile = path.join(process.cwd(), '.calculator_variables.json');
-    const symbolTable = new Map();
     
     try {
         if (fs.existsSync(stateFile)) {
@@ -220,7 +217,7 @@ function loadVariables() {
         // Start fresh if state file is corrupted
     }
     
-    return symbolTable;
+    return new Map();
 }
 
 /**
