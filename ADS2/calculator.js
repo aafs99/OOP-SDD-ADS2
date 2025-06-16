@@ -1,16 +1,23 @@
+#!/usr/bin/env node
+
 /**
- * Postfix++ Calculator
+ * Postfix++ Calculator - Interactive Terminal Version
+ * A stack-based calculator for evaluating postfix arithmetic expressions with variables
+ * Usage: node calculator.js [expression] or run interactively
  */
+
+const readline = require('readline');
+
 class PostfixCalculator {
     constructor() {
         /**
-         * The main stack for operands and intermediate results
+         * The main stack for operands and intermediate results (persistent)
          * @type {Array<number|string>}
          */
         this.stack = [];
 
         /**
-         * Symbol table for variable storage (A-Z only as per specification)
+         * Symbol table for variable storage (A-Z only as per specification) (persistent)
          * @type {Map<string, number>}
          */
         this.symbolTable = new Map();
@@ -26,20 +33,15 @@ class PostfixCalculator {
          * @type {RegExp}
          */
         this.validVariable = /^[A-Z]$/;
-
-        /**
-         * History of operations for debugging/logging
-         * @type {Array<Object>}
-         */
-        this.operationHistory = [];
     }
 
     /**
      * Evaluates a single line of Postfix++ code
+     * Stack and symbol table persist between calls
      * @param {string} expression - The postfix expression to evaluate
      * @returns {Array<number>} The current stack state
      */
-    evaluateLine(expression) {
+    evaluate(expression) {
         if (!expression || typeof expression !== 'string') {
             throw new Error('Invalid expression: must be a non-empty string');
         }
@@ -51,16 +53,12 @@ class PostfixCalculator {
             return [...this.stack]; // Return copy of current stack
         }
 
-        console.log(`> ${expression}`);
-        
         // Process each token
         for (let i = 0; i < tokens.length; i++) {
             const token = tokens[i];
             this._processToken(token);
-            this._logState(token);
         }
 
-        console.log(`[${this.stack.join(' ')}]`);
         return [...this.stack]; // Return copy of stack
     }
 
@@ -73,7 +71,6 @@ class PostfixCalculator {
         // Check if token is a number
         if (this._isNumber(token)) {
             this.stack.push(parseFloat(token));
-            this._recordOperation('PUSH_NUMBER', token, [...this.stack]);
         }
         // Check if token is an operator
         else if (this.operators.has(token)) {
@@ -100,7 +97,7 @@ class PostfixCalculator {
      */
     _isNumber(token) {
         const num = parseFloat(token);
-        return !isNaN(num) && isFinite(num) && token.toString() === num.toString();
+        return !isNaN(num) && isFinite(num);
     }
 
     /**
@@ -153,7 +150,6 @@ class PostfixCalculator {
         }
 
         this.stack.push(result);
-        this._recordOperation('OPERATOR', `${a} ${operator} ${b} = ${result}`, [...this.stack]);
     }
 
     /**
@@ -179,7 +175,6 @@ class PostfixCalculator {
 
         // Store in symbol table
         this.symbolTable.set(variableName, value);
-        this._recordOperation('ASSIGNMENT', `${variableName} = ${value}`, [...this.stack]);
     }
 
     /**
@@ -192,51 +187,18 @@ class PostfixCalculator {
             // Variable exists, push its value
             const value = this.symbolTable.get(variableName);
             this.stack.push(value);
-            this._recordOperation('VARIABLE_USE', `${variableName} (${value})`, [...this.stack]);
         } else {
             // New variable for potential assignment
             this.stack.push(variableName);
-            this._recordOperation('VARIABLE_NAME', variableName, [...this.stack]);
         }
     }
 
     /**
-     * Records operation for history/debugging
-     * @param {string} type - Type of operation
-     * @param {string} details - Operation details
-     * @param {Array} stackState - Stack state after operation
-     * @private
+     * Resets the calculator state
      */
-    _recordOperation(type, details, stackState) {
-        this.operationHistory.push({
-            type,
-            details,
-            stackState: [...stackState],
-            symbolTable: new Map(this.symbolTable),
-            timestamp: new Date()
-        });
-    }
-
-    /**
-     * Logs current state (simplified for interactive use)
-     * @param {string} token - Current token
-     * @private
-     */
-    _logState(token) {
-        const stackDisplay = this.stack.map(item => 
-            typeof item === 'string' ? `"${item}"` : item
-        ).join(', ');
-        console.log(`  Token: ${token} -> Stack: [${stackDisplay}]`);
-    }
-
-    /**
-     * Clears the calculator state
-     */
-    clear() {
+    reset() {
         this.stack = [];
         this.symbolTable.clear();
-        this.operationHistory = [];
-        console.log('Calculator cleared');
     }
 
     /**
@@ -261,26 +223,6 @@ class PostfixCalculator {
     }
 
     /**
-     * Interactive REPL-style evaluation
-     * @param {string} input - User input
-     * @returns {string} Formatted response
-     */
-    interactive(input) {
-        try {
-            const result = this.evaluateLine(input);
-            if (result.length === 0) {
-                return '[]';
-            } else if (result.length === 1 && typeof result[0] === 'number') {
-                return `[${result[0]}]`;
-            } else {
-                return `[${result.join(' ')}]`;
-            }
-        } catch (error) {
-            return `Error: ${error.message}`;
-        }
-    }
-
-    /**
      * Display symbol table contents
      */
     showVariables() {
@@ -294,66 +236,125 @@ class PostfixCalculator {
             console.log(`  ${name} = ${value}`);
         }
     }
+
+    /**
+     * Format the current stack for display
+     * @returns {string} Formatted stack
+     */
+    formatStack() {
+        if (this.stack.length === 0) {
+            return '[]';
+        }
+        return `[${this.stack.join(' ')}]`;
+    }
 }
 
-// === Demo and Testing ===
-
-function runDemo() {
-    console.log('=== Postfix++ Calculator Demo ===\n');
-    
+/**
+ * Interactive REPL mode
+ */
+function startInteractiveMode() {
     const calc = new PostfixCalculator();
-    
-    console.log('--- Stage A: Basic Arithmetic ---');
-    calc.evaluateLine("3 4 5 + *");
-    console.log('Expected: [27]\n');
-    
-    console.log('--- Stage B: Variables and Assignment ---');
-    calc.evaluateLine("A 2 =");
-    calc.evaluateLine("B 3 =");
-    calc.evaluateLine("A B *");
-    console.log('Expected: [6]');
-    calc.showVariables();
-    console.log();
-    
-    console.log('--- Interactive Examples ---');
-    console.log('> C 10 =');
-    console.log(calc.interactive("C 10 ="));
-    
-    console.log('> A C +');
-    console.log(calc.interactive("A C +"));
-    
-    console.log('> D A B + =');
-    console.log(calc.interactive("D A B + ="));
-    
-    console.log('\n--- Final State ---');
-    console.log('Stack:', calc.getState().stack);
-    calc.showVariables();
-}
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        prompt: '> '
+    });
 
-function runInteractiveSimulation() {
-    console.log('\n=== Interactive Session Simulation ===');
-    const calc = new PostfixCalculator();
+    console.log('Postfix++ Calculator - Interactive Mode');
+    console.log('Enter expressions or commands:');
+    console.log('  - Use postfix notation: "1 1 +" gives 2');
+    console.log('  - Variables: "A 5 =" assigns 5 to A');
+    console.log('  - Special commands: .help, .vars, .stack, .clear, .quit');
+    console.log('');
     
-    const commands = [
-        "A 2 =",
-        "B 3 =", 
-        "A B *"
-    ];
-    
-    commands.forEach(cmd => {
-        console.log(`> ${cmd}`);
-        const result = calc.interactive(cmd);
-        console.log(result);
+    rl.prompt();
+
+    rl.on('line', (input) => {
+        const line = input.trim();
+        
+        // Handle special commands
+        if (line.startsWith('.')) {
+            switch (line) {
+                case '.help':
+                    console.log('Commands:');
+                    console.log('  .help  - Show this help');
+                    console.log('  .vars  - Show variables');
+                    console.log('  .stack - Show current stack');
+                    console.log('  .clear - Clear calculator');
+                    console.log('  .quit  - Exit calculator');
+                    break;
+                case '.vars':
+                    calc.showVariables();
+                    break;
+                case '.stack':
+                    console.log('Stack:', calc.formatStack());
+                    break;
+                case '.clear':
+                    calc.reset();
+                    console.log('Calculator cleared');
+                    break;
+                case '.quit':
+                    console.log('Goodbye!');
+                    rl.close();
+                    return;
+                default:
+                    console.log('Unknown command. Type .help for available commands.');
+            }
+        } else if (line === '') {
+            // Empty line, just show current stack
+            console.log(calc.formatStack());
+        } else {
+            // Process expression
+            try {
+                calc.evaluate(line);
+                console.log(calc.formatStack());
+            } catch (error) {
+                console.log(`Error: ${error.message}`);
+            }
+        }
+        
+        rl.prompt();
+    });
+
+    rl.on('close', () => {
+        console.log('\nGoodbye!');
+        process.exit(0);
     });
 }
 
-// Run demonstrations
-if (typeof module !== 'undefined' && require.main === module) {
-    runDemo();
-    runInteractiveSimulation();
+/**
+ * Command line mode - evaluate single expression
+ */
+function evaluateCommandLine(expression) {
+    const calc = new PostfixCalculator();
+    
+    try {
+        calc.evaluate(expression);
+        console.log(calc.formatStack());
+        
+        // If there's exactly one number on the stack, also output just that number
+        if (calc.stack.length === 1 && typeof calc.stack[0] === 'number') {
+            console.log(calc.stack[0]);
+        }
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+        process.exit(1);
+    }
+}
+
+// Main execution logic
+if (require.main === module) {
+    const args = process.argv.slice(2);
+    
+    if (args.length === 0) {
+        // No arguments - start interactive mode
+        startInteractiveMode();
+    } else {
+        // Arguments provided - evaluate as single expression
+        const expression = args.join(' ');
+        evaluateCommandLine(expression);
+    }
 }
 
 // Export for use as module
-if (typeof module !== 'undefined') {
-    module.exports = PostfixCalculator;
-}
+module.exports = PostfixCalculator;
