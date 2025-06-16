@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Postfix++ Calculator - Interactive Terminal Version
- * A stack-based calculator for evaluating postfix arithmetic expressions with variables
- * Usage: node calculator.js [expression] or run interactively
+ * Postfix++ Calculator
  */
 
 const readline = require('readline');
