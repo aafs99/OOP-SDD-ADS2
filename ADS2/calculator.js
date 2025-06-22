@@ -1,13 +1,13 @@
-//Postfix++ Calculator - Modified Version with Custom Stack and Symbol Table
+//Postfix++ Calculator 
 const readline = require('readline');
 
 /**
- * Custom Stack implementation using only arrays (no built-in push/pop)
+ * Stack implementation 
  */
 class Stack {
     constructor() {
         this.items = [];
-        this.topIndex = -1; // Points to the top element, -1 means empty
+        this.topIndex = -1; // Points to the top element, -1 indicates empty stack
     }
 
     /**
@@ -22,20 +22,21 @@ class Stack {
     /**
      * Pop an item from the stack
      * @returns {*} The popped item
+     * @throws {Error} If stack is empty
      */
     pop() {
         if (this.isEmpty()) {
-            throw new Error('Stack underflow: cannot pop from empty stack');
+            throw new Error('Stack underflow: Cannot pop from empty stack');
         }
         const item = this.items[this.topIndex];
-        this.items[this.topIndex] = undefined; // Clear the reference
+        this.items[this.topIndex] = undefined; // Clear the reference to prevent memory leaks
         this.topIndex--;
         return item;
     }
 
     /**
-     * Peek at the top item without removing it
-     * @returns {*} The top item
+     * look at top iten without removing it
+     * @returns {*} The top item, or null if stack is empty
      */
     peek() {
         if (this.isEmpty()) {
@@ -46,7 +47,7 @@ class Stack {
 
     /**
      * Check if stack is empty
-     * @returns {boolean} True if empty
+     * @returns {boolean} True if empty, false if not
      */
     isEmpty() {
         return this.topIndex === -1;
@@ -61,8 +62,8 @@ class Stack {
     }
 
     /**
-     * Get all items as array (for display purposes)
-     * @returns {Array} Copy of stack contents
+     * Get all items as array
+     * @returns {Array} Copy of stack contents from bottom to top
      */
     toArray() {
         const result = [];
@@ -82,7 +83,7 @@ class Stack {
 }
 
 /**
- * Custom Symbol Table implementation with explicit INSERT, SEARCH, DELETE algorithms
+ * Symbol Table implementation with INSERT, SEARCH, DELETE functionality
  */
 class SymbolTable {
     constructor() {
@@ -117,6 +118,7 @@ class SymbolTable {
 
     /**
      * SEARCH algorithm - Find a value by key
+     * Time Complexity: O(n) linear search
      * @param {string} key - The key to search for
      * @returns {*} The value if found, undefined if not found
      */
@@ -155,14 +157,14 @@ class SymbolTable {
     /**
      * Check if a key exists in the symbol table
      * @param {string} key - The key to check
-     * @returns {boolean} True if key exists
+     * @returns {boolean} True if key exists, false if not
      */
     has(key) {
         return this._findIndex(key) !== -1;
     }
 
     /**
-     * Private helper method to find the index of a key
+     * Helper method to find the index of a key using linear search
      * @param {string} key - The key to find
      * @returns {number} Index of key, or -1 if not found
      */
@@ -177,21 +179,19 @@ class SymbolTable {
 
     /**
      * Get all key-value pairs
-     * @returns {Array} Array of [key, value] pairs
+     * @returns {Array<Array>} Array of [key, value] pairs
      */
-    entries() {
+    getEntries() {
         const result = [];
-        let resultIndex = 0;
         for (let i = 0; i < this.size; i++) {
-            result[resultIndex] = [this.keys[i], this.values[i]];
-            resultIndex++;
+            result[i] = [this.keys[i], this.values[i]];
         }
         return result;
     }
 
     /**
      * Get the number of entries
-     * @returns {number} Number of entries
+     * @returns {number} Number of entries in the symbol table
      */
     getSize() {
         return this.size;
@@ -208,24 +208,30 @@ class SymbolTable {
 }
 
 class PostfixCalculator {
+    // Constants for better maintainability
+    static OPERATORS = new Set(['+', '-', '*', '/']);
+    static VARIABLE_PATTERN = /^[A-Z]$/;
+    static NUMBER_PATTERN = /^-?\d+(\.\d+)?$/; // Supports negative numbers and decimals
+    static MAX_SAFE_NUMBER = Number.MAX_SAFE_INTEGER;
+    static MIN_SAFE_NUMBER = Number.MIN_SAFE_INTEGER;
+
     constructor() {
         this.stack = new Stack();
         this.symbolTable = new SymbolTable();
-        this.operators = new Set(['+', '-', '*', '/']);
-        this.validVariable = /^[A-Z]$/;
     }
 
     /**
-     * Evaluates a postfix expression - MODIFIED to not reset state
+     * Evaluates a postfix expression
      * @param {string} expression - The postfix expression to evaluate
      * @returns {Array<number>} The current stack state
+     * @throws {Error} If expression is invalid or evaluation fails
      */
     evaluate(expression) {
         if (!expression || typeof expression !== 'string') {
-            throw new Error('Invalid expression: must be a non-empty string');
+            throw new Error('Invalid expression: Must be a non-empty string');
         }
 
-        const tokens = expression.trim().split(/\s+/).filter(token => token.length > 0);
+        const tokens = this._tokenize(expression);
         
         if (tokens.length === 0) {
             return this.stack.toArray();
@@ -239,45 +245,82 @@ class PostfixCalculator {
     }
 
     /**
+     * Tokenize the input expression
+     * @param {string} expression - The expression to tokenize
+     * @returns {Array<string>} Array of tokens
+     * @private
+     */
+    _tokenize(expression) {
+        return expression.trim().split(/\s+/).filter(token => token.length > 0);
+    }
+
+    /**
      * Processes a single token
      * @param {string} token - The token to process
+     * @throws {Error} If token is invalid
      * @private
      */
     _processToken(token) {
-        if (this._isNumber(token)) {
-            this.stack.push(parseFloat(token));
-        } else if (this.operators.has(token)) {
+        if (this._isValidNumber(token)) {
+            const num = parseFloat(token);
+            this._validateNumberRange(num);
+            this.stack.push(num);
+        } else if (PostfixCalculator.OPERATORS.has(token)) {
             this._handleOperator(token);
         } else if (token === '=') {
             this._handleAssignment();
         } else if (this._isValidVariable(token)) {
             this._handleVariable(token);
         } else {
-            throw new Error(`Invalid token: '${token}'. Variables must be A-Z.`);
+            throw new Error(`Invalid token: '${token}'. Variables must be A-Z, numbers must be valid, operators are +, -, *, /`);
         }
     }
 
     /**
-     * Checks if a token is a valid number
+     * Checks if if a token is a properly formatted number
+     * @param {string} token - The token to validate
+     * @returns {boolean} True if valid number format
+     * @private
      */
-    _isNumber(token) {
+    _isValidNumber(token) {
+        if (!PostfixCalculator.NUMBER_PATTERN.test(token)) {
+            return false;
+        }
         const num = parseFloat(token);
         return !isNaN(num) && isFinite(num);
     }
 
     /**
-     * Checks if a token is a valid variable name (A-Z only) - ENFORCED
+     * Checks if number is within safe range
+     * @param {number} num - The number to validate
+     * @throws {Error} If number is outside safe range
+     * @private
      */
-    _isValidVariable(token) {
-        return this.validVariable.test(token);
+    _validateNumberRange(num) {
+        if (num > PostfixCalculator.MAX_SAFE_NUMBER || num < PostfixCalculator.MIN_SAFE_NUMBER) {
+            throw new Error(`Number ${num} is outside safe range`);
+        }
     }
 
     /**
-     * Handles arithmetic operators
+     * Checks if a token is a valid variable name (A-Z only)
+     * @param {string} token - The token to validate
+     * @returns {boolean} True if valid variable name
+     * @private
+     */
+    _isValidVariable(token) {
+        return PostfixCalculator.VARIABLE_PATTERN.test(token);
+    }
+
+    /**
+     * Handles operators
+     * @param {string} operator - The operator to handle
+     * @throws {Error} If insufficient operands or division by zero
+     * @private
      */
     _handleOperator(operator) {
         if (this.stack.size() < 2) {
-            throw new Error(`Insufficient operands for operator '${operator}'. Need 2, have ${this.stack.size()}.`);
+            throw new Error(`Insufficient operands for operator '${operator}': Need 2, have ${this.stack.size()}`);
         }
 
         const b = this.stack.pop();
@@ -310,24 +353,32 @@ class PostfixCalculator {
                 break;
         }
 
+        this._validateNumberRange(result);
         this.stack.push(result);
     }
 
     /**
-     * Resolves a value (converts variables to their stored values)
+     * Converts variables to their stored value
+     * @param {*} value - The value to resolve
+     * @returns {number} The resolved numeric value
+     * @throws {Error} If variable is undefined
+     * @private
      */
     _resolveValue(value) {
-        if (typeof value === 'string' && this.symbolTable.has(value)) {
-            return this.symbolTable.search(value);
-        }
         if (typeof value === 'string') {
-            throw new Error(`Undefined variable: '${value}'`);
+            if (this.symbolTable.has(value)) {
+                return this.symbolTable.search(value);
+            } else {
+                throw new Error(`Undefined variable: '${value}'`);
+            }
         }
         return value;
     }
 
     /**
-     * Handles variable assignment (=) - MODIFIED behavior
+     * Handles variable assignment
+     * @throws {Error} If assignment is invalid
+     * @private
      */
     _handleAssignment() {
         if (this.stack.size() < 2) {
@@ -339,23 +390,24 @@ class PostfixCalculator {
 
         // The value should be a number (could be result of previous calculation)
         if (typeof value !== 'number') {
-            throw new Error(`Cannot assign non-numeric value: ${value}`);
+            throw new Error(`Cannot assign non-numeric value: '${value}'`);
         }
 
         // The variable name should be a string and valid
         if (typeof variableName !== 'string' || !this._isValidVariable(variableName)) {
-            throw new Error(`Invalid variable name: '${variableName}'. Must be A-Z.`);
+            throw new Error(`Invalid variable name: '${variableName}'. Must be A-Z`);
         }
 
         // Store in symbol table using INSERT algorithm
         this.symbolTable.insert(variableName, value);
         
-        // MODIFIED: Don't return anything to stack after assignment
-        // The assignment operator should only update the variable, not leave anything on stack
+        // Assignment operator consumes both operands and produces no result
     }
 
     /**
      * Handles variable references
+     * @param {string} variableName - The variable name to handle
+     * @private
      */
     _handleVariable(variableName) {
         if (this.symbolTable.has(variableName)) {
@@ -369,42 +421,43 @@ class PostfixCalculator {
     }
 
     /**
-     * Get the final result for output
-     * @returns {string|number} The result to display
+     * Get the top stack value for output without modifying the stack
+     * This method returns the top value of the stack, resolving variables to their values.
+     * If the stack is empty, it returns '[]'.
+     * If the top value is a variable name, it checks the symbol table and returns its value or 'undefined' if not found.
+     * If the top value is a number, it returns that number.
+     * @returns {number|string|null} The result to display, or null if stack is empty
      */
-    getResult() {
+    getTopResult() {
         const stackArray = this.stack.toArray();
         
         if (stackArray.length === 0) {
-            return '';
+            return '[]'; // No result for empty stack
         }
         
-        if (stackArray.length === 1) {
-            if (typeof stackArray[0] === 'string') {
-                // This is a variable name - check if it exists
-                if (this.symbolTable.has(stackArray[0])) {
-                    return this.symbolTable.search(stackArray[0]);
-                } else {
-                    return 'undefined';
-                }
+        const topValue = stackArray[stackArray.length - 1];
+        
+        if (typeof topValue === 'string') {
+            // This is a variable name - check if it exists
+            if (this.symbolTable.has(topValue)) {
+                return this.symbolTable.search(topValue);
             } else {
-                // Numeric result
-                return stackArray[0];
+                return 'undefined';
             }
         }
         
-        // Multiple items on stack - shouldn't happen in normal calculator use
-        return stackArray[stackArray.length - 1];
+        return topValue;
     }
 
     /**
-     * Delete a variable from the symbol table - IMPLEMENTED
+     * Delete a variable from the symbol table
      * @param {string} variableName - Variable to delete
-     * @returns {boolean} True if deleted successfully
+     * @returns {boolean} True if deleted successfully, false if not found
+     * @throws {Error} If variable name is invalid
      */
     deleteVariable(variableName) {
         if (!this._isValidVariable(variableName)) {
-            throw new Error(`Invalid variable name: '${variableName}'. Must be A-Z.`);
+            throw new Error(`Invalid variable name: '${variableName}'. Must be A-Z`);
         }
         return this.symbolTable.delete(variableName);
     }
@@ -419,6 +472,7 @@ class PostfixCalculator {
 
     /**
      * Format the current stack for display
+     * @returns {string} Formatted stack representation
      */
     formatStack() {
         const stackArray = this.stack.toArray();
@@ -437,7 +491,7 @@ class PostfixCalculator {
             return;
         }
         console.log('Variables:');
-        const entries = this.symbolTable.entries();
+        const entries = this.symbolTable.getEntries();
         for (let i = 0; i < entries.length; i++) {
             const [name, value] = entries[i];
             console.log(`  ${name} = ${value}`);
@@ -445,15 +499,24 @@ class PostfixCalculator {
     }
 
     /**
-     * Get symbol table entries (for display purposes)
+     * Get symbol table entries
+     * @returns {Array<Array>} Array of [key, value] pairs
      */
     getSymbolTableEntries() {
-        return this.symbolTable.entries();
+        return this.symbolTable.getEntries();
+    }
+
+    /**
+     * Get current stack size
+     * @returns {number} Number of items on stack
+     */
+    getStackSize() {
+        return this.stack.size();
     }
 }
 
 /**
- * Interactive REPL mode
+ * User mode
  */
 function startInteractiveMode() {
     const calc = new PostfixCalculator();
@@ -463,7 +526,7 @@ function startInteractiveMode() {
         prompt: '> '
     });
 
-    console.log('Postfix++ Calculator - Interactive Mode');
+    console.log('Postfix++ Calculator');
     console.log('Enter expressions or commands:');
     console.log('  Examples: "1 1 +", "A 5 =", "A B *"');
     console.log('  Commands: .help, .vars, .stack, .clear, .delete <var>, .quit');
@@ -507,9 +570,9 @@ function startInteractiveMode() {
                         const varName = parts[1];
                         try {
                             if (calc.deleteVariable(varName)) {
-                                // Don't output anything for successful delete
+                                console.log(`Variable '${varName}' deleted`);
                             } else {
-                                console.log(`Variable ${varName} not found`);
+                                console.log(`Variable '${varName}' not found`);
                             }
                         } catch (error) {
                             console.log(`Error: ${error.message}`);
@@ -525,23 +588,20 @@ function startInteractiveMode() {
                     return;
 
                 default:
-                    console.log('Unknown command. Type .help for available commands.');
+                    console.log('Unknown command. Type .help for available commands');
             }
         } else if (line === '') {
-            // Empty line - don't output anything
+            // Empty line, no output 
         } else {
             try {
                 calc.evaluate(line);
-                const result = calc.getResult();
-                if (result !== '') {
+                const result = calc.getTopResult();
+                if (result !== null) {
                     console.log(result);
                 }
-                // Clear stack after showing result to prevent accumulation
-                calc.stack.clear();
+                // no output for operations that leave empty stack
             } catch (error) {
                 console.log(`Error: ${error.message}`);
-                // Clear stack on error too
-                calc.stack.clear();
             }
         }
 
@@ -555,7 +615,7 @@ function startInteractiveMode() {
 }
 
 /**
- * Command line mode - evaluate single expression
+ * Command line mode 
  */
 function evaluateCommandLine(expression) {
     const calc = new PostfixCalculator();
