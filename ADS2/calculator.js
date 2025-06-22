@@ -1,25 +1,222 @@
-#!/usr/bin/env node
+//Postfix++ Calculator - Modified Version with Custom Stack and Symbol Table
+const readline = require('readline');
 
 /**
- * Postfix++ Calculator - Interactive Terminal Version
- * A stack-based calculator for evaluating postfix arithmetic expressions with variables
- * Usage: node calculator.js [expression] or run interactively
+ * Custom Stack implementation using only arrays (no built-in push/pop)
  */
+class Stack {
+    constructor() {
+        this.items = [];
+        this.topIndex = -1; // Points to the top element, -1 means empty
+    }
 
-const readline = require('readline');
-const fs = require('fs');
-const path = require('path');
+    /**
+     * Push an item onto the stack
+     * @param {*} item - Item to push
+     */
+    push(item) {
+        this.topIndex++;
+        this.items[this.topIndex] = item;
+    }
+
+    /**
+     * Pop an item from the stack
+     * @returns {*} The popped item
+     */
+    pop() {
+        if (this.isEmpty()) {
+            throw new Error('Stack underflow: cannot pop from empty stack');
+        }
+        const item = this.items[this.topIndex];
+        this.items[this.topIndex] = undefined; // Clear the reference
+        this.topIndex--;
+        return item;
+    }
+
+    /**
+     * Peek at the top item without removing it
+     * @returns {*} The top item
+     */
+    peek() {
+        if (this.isEmpty()) {
+            return null;
+        }
+        return this.items[this.topIndex];
+    }
+
+    /**
+     * Check if stack is empty
+     * @returns {boolean} True if empty
+     */
+    isEmpty() {
+        return this.topIndex === -1;
+    }
+
+    /**
+     * Get stack size
+     * @returns {number} Number of items in stack
+     */
+    size() {
+        return this.topIndex + 1;
+    }
+
+    /**
+     * Get all items as array (for display purposes)
+     * @returns {Array} Copy of stack contents
+     */
+    toArray() {
+        const result = [];
+        for (let i = 0; i <= this.topIndex; i++) {
+            result[i] = this.items[i];
+        }
+        return result;
+    }
+
+    /**
+     * Clear the stack
+     */
+    clear() {
+        this.items = [];
+        this.topIndex = -1;
+    }
+}
+
+/**
+ * Custom Symbol Table implementation with explicit INSERT, SEARCH, DELETE algorithms
+ */
+class SymbolTable {
+    constructor() {
+        // Using parallel arrays to store keys and values
+        this.keys = [];
+        this.values = [];
+        this.size = 0;
+    }
+
+    /**
+     * INSERT algorithm - Add or update a key-value pair
+     * @param {string} key - The variable name
+     * @param {*} value - The value to store
+     * @returns {boolean} True if successful
+     */
+    insert(key, value) {
+        // First, search if key already exists
+        const existingIndex = this._findIndex(key);
+        
+        if (existingIndex !== -1) {
+            // Key exists, update the value
+            this.values[existingIndex] = value;
+            return true;
+        }
+
+        // Key doesn't exist, add new entry
+        this.keys[this.size] = key;
+        this.values[this.size] = value;
+        this.size++;
+        return true;
+    }
+
+    /**
+     * SEARCH algorithm - Find a value by key
+     * @param {string} key - The key to search for
+     * @returns {*} The value if found, undefined if not found
+     */
+    search(key) {
+        const index = this._findIndex(key);
+        if (index !== -1) {
+            return this.values[index];
+        }
+        return undefined;
+    }
+
+    /**
+     * DELETE algorithm - Remove a key-value pair
+     * @param {string} key - The key to delete
+     * @returns {boolean} True if deleted, false if not found
+     */
+    delete(key) {
+        const index = this._findIndex(key);
+        if (index === -1) {
+            return false; // Key not found
+        }
+
+        // Shift all elements after the deleted index to the left
+        for (let i = index; i < this.size - 1; i++) {
+            this.keys[i] = this.keys[i + 1];
+            this.values[i] = this.values[i + 1];
+        }
+
+        // Clear the last elements and decrease size
+        this.keys[this.size - 1] = undefined;
+        this.values[this.size - 1] = undefined;
+        this.size--;
+        return true;
+    }
+
+    /**
+     * Check if a key exists in the symbol table
+     * @param {string} key - The key to check
+     * @returns {boolean} True if key exists
+     */
+    has(key) {
+        return this._findIndex(key) !== -1;
+    }
+
+    /**
+     * Private helper method to find the index of a key
+     * @param {string} key - The key to find
+     * @returns {number} Index of key, or -1 if not found
+     */
+    _findIndex(key) {
+        for (let i = 0; i < this.size; i++) {
+            if (this.keys[i] === key) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Get all key-value pairs
+     * @returns {Array} Array of [key, value] pairs
+     */
+    entries() {
+        const result = [];
+        let resultIndex = 0;
+        for (let i = 0; i < this.size; i++) {
+            result[resultIndex] = [this.keys[i], this.values[i]];
+            resultIndex++;
+        }
+        return result;
+    }
+
+    /**
+     * Get the number of entries
+     * @returns {number} Number of entries
+     */
+    getSize() {
+        return this.size;
+    }
+
+    /**
+     * Clear all entries
+     */
+    clear() {
+        this.keys = [];
+        this.values = [];
+        this.size = 0;
+    }
+}
 
 class PostfixCalculator {
     constructor() {
-        this.stack = [];
-        this.symbolTable = new Map();
+        this.stack = new Stack();
+        this.symbolTable = new SymbolTable();
         this.operators = new Set(['+', '-', '*', '/']);
         this.validVariable = /^[A-Z]$/;
     }
 
     /**
-     * Evaluates a postfix expression
+     * Evaluates a postfix expression - MODIFIED to not reset state
      * @param {string} expression - The postfix expression to evaluate
      * @returns {Array<number>} The current stack state
      */
@@ -31,14 +228,14 @@ class PostfixCalculator {
         const tokens = expression.trim().split(/\s+/).filter(token => token.length > 0);
         
         if (tokens.length === 0) {
-            return [...this.stack];
+            return this.stack.toArray();
         }
 
         for (const token of tokens) {
             this._processToken(token);
         }
 
-        return [...this.stack];
+        return this.stack.toArray();
     }
 
     /**
@@ -69,7 +266,7 @@ class PostfixCalculator {
     }
 
     /**
-     * Checks if a token is a valid variable name (A-Z only)
+     * Checks if a token is a valid variable name (A-Z only) - ENFORCED
      */
     _isValidVariable(token) {
         return this.validVariable.test(token);
@@ -79,8 +276,8 @@ class PostfixCalculator {
      * Handles arithmetic operators
      */
     _handleOperator(operator) {
-        if (this.stack.length < 2) {
-            throw new Error(`Insufficient operands for operator '${operator}'. Need 2, have ${this.stack.length}.`);
+        if (this.stack.size() < 2) {
+            throw new Error(`Insufficient operands for operator '${operator}'. Need 2, have ${this.stack.size()}.`);
         }
 
         const b = this.stack.pop();
@@ -121,7 +318,7 @@ class PostfixCalculator {
      */
     _resolveValue(value) {
         if (typeof value === 'string' && this.symbolTable.has(value)) {
-            return this.symbolTable.get(value);
+            return this.symbolTable.search(value);
         }
         if (typeof value === 'string') {
             throw new Error(`Undefined variable: '${value}'`);
@@ -130,10 +327,10 @@ class PostfixCalculator {
     }
 
     /**
-     * Handles variable assignment (=)
+     * Handles variable assignment (=) - MODIFIED behavior
      */
     _handleAssignment() {
-        if (this.stack.length < 2) {
+        if (this.stack.size() < 2) {
             throw new Error('Assignment requires variable name and value on stack');
         }
 
@@ -150,8 +347,11 @@ class PostfixCalculator {
             throw new Error(`Invalid variable name: '${variableName}'. Must be A-Z.`);
         }
 
-        // Store in symbol table
-        this.symbolTable.set(variableName, value);
+        // Store in symbol table using INSERT algorithm
+        this.symbolTable.insert(variableName, value);
+        
+        // MODIFIED: Don't return anything to stack after assignment
+        // The assignment operator should only update the variable, not leave anything on stack
     }
 
     /**
@@ -159,8 +359,8 @@ class PostfixCalculator {
      */
     _handleVariable(variableName) {
         if (this.symbolTable.has(variableName)) {
-            // Variable exists, push its value
-            const value = this.symbolTable.get(variableName);
+            // Variable exists, push its value using SEARCH algorithm
+            const value = this.symbolTable.search(variableName);
             this.stack.push(value);
         } else {
             // New variable name for potential assignment
@@ -169,10 +369,51 @@ class PostfixCalculator {
     }
 
     /**
+     * Get the final result for output
+     * @returns {string|number} The result to display
+     */
+    getResult() {
+        const stackArray = this.stack.toArray();
+        
+        if (stackArray.length === 0) {
+            return '';
+        }
+        
+        if (stackArray.length === 1) {
+            if (typeof stackArray[0] === 'string') {
+                // This is a variable name - check if it exists
+                if (this.symbolTable.has(stackArray[0])) {
+                    return this.symbolTable.search(stackArray[0]);
+                } else {
+                    return 'undefined';
+                }
+            } else {
+                // Numeric result
+                return stackArray[0];
+            }
+        }
+        
+        // Multiple items on stack - shouldn't happen in normal calculator use
+        return stackArray[stackArray.length - 1];
+    }
+
+    /**
+     * Delete a variable from the symbol table - IMPLEMENTED
+     * @param {string} variableName - Variable to delete
+     * @returns {boolean} True if deleted successfully
+     */
+    deleteVariable(variableName) {
+        if (!this._isValidVariable(variableName)) {
+            throw new Error(`Invalid variable name: '${variableName}'. Must be A-Z.`);
+        }
+        return this.symbolTable.delete(variableName);
+    }
+
+    /**
      * Resets the calculator state
      */
     reset() {
-        this.stack = [];
+        this.stack.clear();
         this.symbolTable.clear();
     }
 
@@ -180,73 +421,34 @@ class PostfixCalculator {
      * Format the current stack for display
      */
     formatStack() {
-        if (this.stack.length === 0) {
+        const stackArray = this.stack.toArray();
+        if (stackArray.length === 0) {
             return '[]';
         }
-        return `[${this.stack.join(' ')}]`;
+        return `[${stackArray.join(' ')}]`;
     }
 
     /**
      * Display symbol table contents
      */
     showVariables() {
-        if (this.symbolTable.size === 0) {
+        if (this.symbolTable.getSize() === 0) {
             console.log('No variables defined');
             return;
         }
-        
         console.log('Variables:');
-        for (const [name, value] of this.symbolTable) {
+        const entries = this.symbolTable.entries();
+        for (let i = 0; i < entries.length; i++) {
+            const [name, value] = entries[i];
             console.log(`  ${name} = ${value}`);
         }
     }
-}
 
-/**
- * Load only variables (symbol table) from file, not the stack
- */
-function loadVariables() {
-    const stateFile = path.join(process.cwd(), '.calculator_variables.json');
-    
-    try {
-        if (fs.existsSync(stateFile)) {
-            const savedState = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-            return new Map(savedState.symbolTable || []);
-        }
-    } catch (error) {
-        // Start fresh if state file is corrupted
-    }
-    
-    return new Map();
-}
-
-/**
- * Save only variables (symbol table) to file, not the stack
- */
-function saveVariables(symbolTable) {
-    const stateFile = path.join(process.cwd(), '.calculator_variables.json');
-    const stateToSave = {
-        symbolTable: Array.from(symbolTable.entries())
-    };
-    
-    try {
-        fs.writeFileSync(stateFile, JSON.stringify(stateToSave));
-    } catch (error) {
-        // Ignore save errors
-    }
-}
-
-/**
- * Clear saved variables file
- */
-function clearVariables() {
-    const stateFile = path.join(process.cwd(), '.calculator_variables.json');
-    try {
-        if (fs.existsSync(stateFile)) {
-            fs.unlinkSync(stateFile);
-        }
-    } catch (error) {
-        // Ignore errors
+    /**
+     * Get symbol table entries (for display purposes)
+     */
+    getSymbolTableEntries() {
+        return this.symbolTable.entries();
     }
 }
 
@@ -255,8 +457,6 @@ function clearVariables() {
  */
 function startInteractiveMode() {
     const calc = new PostfixCalculator();
-    calc.symbolTable = loadVariables();
-    
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
@@ -266,60 +466,89 @@ function startInteractiveMode() {
     console.log('Postfix++ Calculator - Interactive Mode');
     console.log('Enter expressions or commands:');
     console.log('  Examples: "1 1 +", "A 5 =", "A B *"');
-    console.log('  Commands: .help, .vars, .stack, .clear, .quit');
+    console.log('  Commands: .help, .vars, .stack, .clear, .delete <var>, .quit');
     console.log('');
-    
+
     rl.prompt();
 
     rl.on('line', (input) => {
         const line = input.trim();
-        
+
         if (line.startsWith('.')) {
-            switch (line) {
+            const parts = line.split(' ');
+            const command = parts[0];
+
+            switch (command) {
                 case '.help':
                     console.log('Commands:');
-                    console.log('  .help  - Show this help');
-                    console.log('  .vars  - Show variables');
-                    console.log('  .stack - Show current stack');
-                    console.log('  .clear - Clear calculator');
-                    console.log('  .quit  - Exit calculator');
+                    console.log('  .help         - Show this help');
+                    console.log('  .vars         - Show variables');
+                    console.log('  .stack        - Show current stack');
+                    console.log('  .clear        - Clear calculator');
+                    console.log('  .delete <var> - Delete a variable');
+                    console.log('  .quit         - Exit calculator');
                     break;
+
                 case '.vars':
                     calc.showVariables();
                     break;
+
                 case '.stack':
                     console.log('Stack:', calc.formatStack());
                     break;
+
                 case '.clear':
                     calc.reset();
-                    clearVariables();
                     console.log('Calculator cleared');
                     break;
+
+                case '.delete':
+                    if (parts.length > 1) {
+                        const varName = parts[1];
+                        try {
+                            if (calc.deleteVariable(varName)) {
+                                // Don't output anything for successful delete
+                            } else {
+                                console.log(`Variable ${varName} not found`);
+                            }
+                        } catch (error) {
+                            console.log(`Error: ${error.message}`);
+                        }
+                    } else {
+                        console.log('Usage: .delete <variable_name>');
+                    }
+                    break;
+
                 case '.quit':
-                    saveVariables(calc.symbolTable);
                     console.log('Goodbye!');
                     rl.close();
                     return;
+
                 default:
                     console.log('Unknown command. Type .help for available commands.');
             }
         } else if (line === '') {
-            console.log(calc.formatStack());
+            // Empty line - don't output anything
         } else {
             try {
                 calc.evaluate(line);
-                console.log(calc.formatStack());
-                saveVariables(calc.symbolTable);
+                const result = calc.getResult();
+                if (result !== '') {
+                    console.log(result);
+                }
+                // Clear stack after showing result to prevent accumulation
+                calc.stack.clear();
             } catch (error) {
                 console.log(`Error: ${error.message}`);
+                // Clear stack on error too
+                calc.stack.clear();
             }
         }
-        
+
         rl.prompt();
     });
 
     rl.on('close', () => {
-        saveVariables(calc.symbolTable);
         console.log('\nGoodbye!');
         process.exit(0);
     });
@@ -330,21 +559,15 @@ function startInteractiveMode() {
  */
 function evaluateCommandLine(expression) {
     const calc = new PostfixCalculator();
-    // Load only variables, not the stack (stack starts fresh each time)
-    calc.symbolTable = loadVariables();
-    
     try {
         calc.evaluate(expression);
         console.log(calc.formatStack());
-        
+
         // If there's exactly one number on the stack, also output just that number
-        if (calc.stack.length === 1 && typeof calc.stack[0] === 'number') {
-            console.log(calc.stack[0]);
+        const stackArray = calc.stack.toArray();
+        if (stackArray.length === 1 && typeof stackArray[0] === 'number') {
+            console.log(stackArray[0]);
         }
-        
-        // Save variables for future use
-        saveVariables(calc.symbolTable);
-        
     } catch (error) {
         console.error(`Error: ${error.message}`);
         process.exit(1);
@@ -354,7 +577,6 @@ function evaluateCommandLine(expression) {
 // Main execution logic
 if (require.main === module) {
     const args = process.argv.slice(2);
-    
     if (args.length === 0) {
         startInteractiveMode();
     } else {
