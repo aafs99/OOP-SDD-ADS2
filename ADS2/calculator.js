@@ -35,7 +35,7 @@ class Stack {
     }
 
     /**
-     * look at top iten without removing it
+     * look at top item without removing it
      * @returns {*} The top item, or null if stack is empty
      */
     peek() {
@@ -209,15 +209,23 @@ class SymbolTable {
 
 class PostfixCalculator {
     // Constants for better maintainability
-    static OPERATORS = new Set(['+', '-', '*', '/']);
+    static BINARY_OPERATORS = new Set(['+', '-', '*', '/', '^', '%', 'mod']);
+    static UNARY_OPERATORS = new Set(['sqrt', 'log', 'ln', 'sin', 'cos', 'tan', '!', 'neg']);
+    static CONSTANTS = new Map([
+        ['pi', Math.PI],
+        ['e', Math.E]
+    ]);
+    
     static VARIABLE_PATTERN = /^[A-Z]$/;
-    static NUMBER_PATTERN = /^-?\d+(\.\d+)?$/; // Supports negative numbers and decimals
+    // Updated pattern to support scientific notation
+    static NUMBER_PATTERN = /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/;
     static MAX_SAFE_NUMBER = Number.MAX_SAFE_INTEGER;
     static MIN_SAFE_NUMBER = Number.MIN_SAFE_INTEGER;
 
     constructor() {
         this.stack = new Stack();
         this.symbolTable = new SymbolTable();
+        this.lastOperationWasAssignment = false; // Track assignment operations
     }
 
     /**
@@ -227,8 +235,8 @@ class PostfixCalculator {
      * @throws {Error} If expression is invalid or evaluation fails
      */
     evaluate(expression) {
-        if (!expression || typeof expression !== 'string') {
-            throw new Error('Invalid expression: Must be a non-empty string');
+        if (typeof expression !== 'string') {
+            throw new Error('Invalid expression: Must be a string');
         }
 
         const tokens = this._tokenize(expression);
@@ -236,6 +244,8 @@ class PostfixCalculator {
         if (tokens.length === 0) {
             return this.stack.toArray();
         }
+
+        this.lastOperationWasAssignment = false;
 
         for (const token of tokens) {
             this._processToken(token);
@@ -265,19 +275,23 @@ class PostfixCalculator {
             const num = parseFloat(token);
             this._validateNumberRange(num);
             this.stack.push(num);
-        } else if (PostfixCalculator.OPERATORS.has(token)) {
-            this._handleOperator(token);
+        } else if (PostfixCalculator.BINARY_OPERATORS.has(token)) {
+            this._handleBinaryOperator(token);
+        } else if (PostfixCalculator.UNARY_OPERATORS.has(token)) {
+            this._handleUnaryOperator(token);
+        } else if (PostfixCalculator.CONSTANTS.has(token)) {
+            this.stack.push(PostfixCalculator.CONSTANTS.get(token));
         } else if (token === '=') {
             this._handleAssignment();
         } else if (this._isValidVariable(token)) {
             this._handleVariable(token);
         } else {
-            throw new Error(`Invalid token: '${token}'. Variables must be A-Z, numbers must be valid, operators are +, -, *, /`);
+            throw new Error(`Invalid token: '${token}'. Valid tokens: numbers, variables (A-Z), operators (+,-,*,/,^,%,mod,sqrt,log,ln,sin,cos,tan,!,neg), constants (pi,e), assignment (=)`);
         }
     }
 
     /**
-     * Checks if if a token is a properly formatted number
+     * Checks if a token is a properly formatted number
      * @param {string} token - The token to validate
      * @returns {boolean} True if valid number format
      * @private
@@ -313,12 +327,12 @@ class PostfixCalculator {
     }
 
     /**
-     * Handles operators
+     * Handles binary operators
      * @param {string} operator - The operator to handle
-     * @throws {Error} If insufficient operands or division by zero
+     * @throws {Error} If insufficient operands or invalid operation
      * @private
      */
-    _handleOperator(operator) {
+    _handleBinaryOperator(operator) {
         if (this.stack.size() < 2) {
             throw new Error(`Insufficient operands for operator '${operator}': Need 2, have ${this.stack.size()}`);
         }
@@ -351,10 +365,107 @@ class PostfixCalculator {
                 }
                 result = aValue / bValue;
                 break;
+            case '^':
+                result = Math.pow(aValue, bValue);
+                if (!isFinite(result)) {
+                    throw new Error(`Power operation resulted in invalid number: ${aValue}^${bValue}`);
+                }
+                break;
+            case '%':
+            case 'mod':
+                if (bValue === 0) {
+                    throw new Error('Modulo by zero is not allowed');
+                }
+                result = aValue % bValue;
+                break;
         }
 
         this._validateNumberRange(result);
         this.stack.push(result);
+    }
+
+    /**
+     * Handles unary operators
+     * @param {string} operator - The operator to handle
+     * @throws {Error} If insufficient operands or invalid operation
+     * @private
+     */
+    _handleUnaryOperator(operator) {
+        if (this.stack.size() < 1) {
+            throw new Error(`Insufficient operands for operator '${operator}': Need 1, have ${this.stack.size()}`);
+        }
+
+        const a = this.stack.pop();
+        const aValue = this._resolveValue(a);
+
+        if (typeof aValue !== 'number') {
+            throw new Error(`Cannot apply operator '${operator}' to non-numeric value`);
+        }
+
+        let result;
+        switch (operator) {
+            case 'sqrt':
+                if (aValue < 0) {
+                    throw new Error('Square root of negative number is not allowed');
+                }
+                result = Math.sqrt(aValue);
+                break;
+            case 'log':
+                if (aValue <= 0) {
+                    throw new Error('Logarithm of non-positive number is not allowed');
+                }
+                result = Math.log10(aValue);
+                break;
+            case 'ln':
+                if (aValue <= 0) {
+                    throw new Error('Natural logarithm of non-positive number is not allowed');
+                }
+                result = Math.log(aValue);
+                break;
+            case 'sin':
+                result = Math.sin(aValue);
+                break;
+            case 'cos':
+                result = Math.cos(aValue);
+                break;
+            case 'tan':
+                result = Math.tan(aValue);
+                break;
+            case '!':
+                if (aValue < 0 || !Number.isInteger(aValue)) {
+                    throw new Error('Factorial is only defined for non-negative integers');
+                }
+                if (aValue > 170) {
+                    throw new Error('Factorial argument too large (maximum 170)');
+                }
+                result = this._factorial(aValue);
+                break;
+            case 'neg':
+                result = -aValue;
+                break;
+        }
+
+        if (!isFinite(result)) {
+            throw new Error(`Operation '${operator}' resulted in invalid number`);
+        }
+
+        this._validateNumberRange(result);
+        this.stack.push(result);
+    }
+
+    /**
+     * Calculate factorial
+     * @param {number} n - The number to calculate factorial for
+     * @returns {number} The factorial result
+     * @private
+     */
+    _factorial(n) {
+        if (n === 0 || n === 1) return 1;
+        let result = 1;
+        for (let i = 2; i <= n; i++) {
+            result *= i;
+        }
+        return result;
     }
 
     /**
@@ -384,22 +495,27 @@ class PostfixCalculator {
         if (this.stack.size() < 2) {
             throw new Error('Assignment requires variable name and value on stack');
         }
-
+        
+        // pop in reverse order: value comes off first, then variable
         const value = this.stack.pop();
         const variableName = this.stack.pop();
-
-        // The value should be a number (could be result of previous calculation)
-        if (typeof value !== 'number') {
-            throw new Error(`Cannot assign non-numeric value: '${value}'`);
-        }
 
         // The variable name should be a string and valid
         if (typeof variableName !== 'string' || !this._isValidVariable(variableName)) {
             throw new Error(`Invalid variable name: '${variableName}'. Must be A-Z`);
         }
 
+        // The value should be a number (could be result of previous calculation)
+        const resolvedValue = this._resolveValue(value);
+        if (typeof resolvedValue !== 'number') {
+            throw new Error(`Cannot assign non-numeric value: '${value}'`);
+        }
+
         // Store in symbol table using INSERT algorithm
-        this.symbolTable.insert(variableName, value);
+        this.symbolTable.insert(variableName, resolvedValue);
+        
+        // Mark that the last operation was an assignment
+        this.lastOperationWasAssignment = true;
         
         // Assignment operator consumes both operands and produces no result
     }
@@ -410,29 +526,29 @@ class PostfixCalculator {
      * @private
      */
     _handleVariable(variableName) {
-        if (this.symbolTable.has(variableName)) {
-            // Variable exists, push its value using SEARCH algorithm
-            const value = this.symbolTable.search(variableName);
-            this.stack.push(value);
-        } else {
-            // New variable name for potential assignment
-            this.stack.push(variableName);
-        }
+        // Always push the variable name itself onto the stack
+        // The resolution to values happens only when needed by operators
+        this.stack.push(variableName);
     }
 
     /**
      * Get the top stack value for output without modifying the stack
      * This method returns the top value of the stack, resolving variables to their values.
-     * If the stack is empty, it returns '[]'.
+     * If the stack is empty, it returns null.
      * If the top value is a variable name, it checks the symbol table and returns its value or 'undefined' if not found.
      * If the top value is a number, it returns that number.
-     * @returns {number|string|null} The result to display, or null if stack is empty
+     * @returns {number|string|null} The result to display, or null if stack is empty or last operation was assignment
      */
     getTopResult() {
+        // Don't show result if last operation was assignment
+        if (this.lastOperationWasAssignment) {
+            return null;
+        }
+        
         const stackArray = this.stack.toArray();
         
         if (stackArray.length === 0) {
-            return '[]'; // No result for empty stack
+            return null; // No result for empty stack
         }
         
         const topValue = stackArray[stackArray.length - 1];
@@ -468,10 +584,12 @@ class PostfixCalculator {
     reset() {
         this.stack.clear();
         this.symbolTable.clear();
+        this.lastOperationWasAssignment = false;
     }
 
     /**
      * Format the current stack for display
+     * Stack is displayed with top element on the LEFT as per specification
      * @returns {string} Formatted stack representation
      */
     formatStack() {
@@ -479,7 +597,9 @@ class PostfixCalculator {
         if (stackArray.length === 0) {
             return '[]';
         }
-        return `[${stackArray.join(' ')}]`;
+        // Reverse the array so top of stack appears on the left
+        const reversed = stackArray.slice().reverse();
+        return `[${reversed.join(' ')}]`;
     }
 
     /**
@@ -516,7 +636,7 @@ class PostfixCalculator {
 }
 
 /**
- * User mode
+ * Enhanced interactive mode with error recovery
  */
 function startInteractiveMode() {
     const calc = new PostfixCalculator();
@@ -526,10 +646,12 @@ function startInteractiveMode() {
         prompt: '> '
     });
 
-    console.log('Postfix++ Calculator');
+    console.log('Postfix++ Calculator - Enhanced Version');
     console.log('Enter expressions or commands:');
-    console.log('  Examples: "1 1 +", "A 5 =", "A B *"');
-    console.log('  Commands: .help, .vars, .stack, .clear, .delete <var>, .quit');
+    console.log('Basic: "1 1 +", "A 5 =", "A B *"');
+    console.log('Advanced: "2 3 ^", "25 sqrt", "5 !", "pi 2 *", "45 sin"');
+    console.log('Commands:\n HELP: .help,\n CHECK VARIABLES: .vars,\n STACK: .stack,\n CLEAR: .clear,\n DELETE: .delete <var>,\n SEARCH: .get <var>,\n QUIT: CRTL + C, .Q');
+    console.log('Note: Angles for trig functions are in radians');
     console.log('');
 
     rl.prompt();
@@ -545,15 +667,37 @@ function startInteractiveMode() {
                 case '.help':
                     console.log('Commands:');
                     console.log('  .help         - Show this help');
-                    console.log('  .vars         - Show variables');
-                    console.log('  .stack        - Show current stack');
+                    console.log('  .vars         - Show all variables');
+                    console.log('  .get <var>    - Show value of a variable without affecting stack');
+                    console.log('  .stack        - Show current stack (bottom to top, left to right)');
                     console.log('  .clear        - Clear calculator');
                     console.log('  .delete <var> - Delete a variable');
-                    console.log('  .quit         - Exit calculator');
+                    console.log('  .Q, CTRL+C - Exit calculator');
+                    console.log('');
+                    console.log('Operators:');
+                    console.log('  Binary: +, -, *, /, ^, %, mod');
+                    console.log('  Unary: sqrt, log, ln, sin, cos, tan, !, neg');
+                    console.log('  Constants: pi, e');
+                    console.log('  Assignment: =');
                     break;
 
                 case '.vars':
                     calc.showVariables();
+                    break;
+
+                case '.get':
+                    if (parts.length > 1) {
+                        const varName = parts[1];
+                        if (!/^[A-Z]$/.test(varName)) {
+                            console.log(`Error: Invalid variable name: '${varName}'. Must be A-Z`);
+                        } else if (calc.symbolTable.has(varName)) {
+                            console.log(`${varName} = ${calc.symbolTable.search(varName)}`);
+                        } else {
+                            console.log(`Variable '${varName}' is not defined`);
+                        }
+                    } else {
+                        console.log('Usage: .get <variable_name>');
+                    }
                     break;
 
                 case '.stack':
@@ -582,7 +726,7 @@ function startInteractiveMode() {
                     }
                     break;
 
-                case '.quit':
+                case '.Q':
                     console.log('Goodbye!');
                     rl.close();
                     return;
@@ -593,13 +737,14 @@ function startInteractiveMode() {
         } else if (line === '') {
             // Empty line, no output 
         } else {
+            // Enhanced error recovery: continue execution after errors in interactive mode
             try {
                 calc.evaluate(line);
                 const result = calc.getTopResult();
                 if (result !== null) {
                     console.log(result);
                 }
-                // no output for operations that leave empty stack
+                // no output for operations that leave empty stack or assignments
             } catch (error) {
                 console.log(`Error: ${error.message}`);
             }
@@ -611,6 +756,12 @@ function startInteractiveMode() {
     rl.on('close', () => {
         console.log('\nGoodbye!');
         process.exit(0);
+    });
+
+    // Enhanced error recovery: Handle SIGINT (Ctrl+C) gracefully
+    process.on('SIGINT', () => {
+        console.log('\n\nUse .Q to exit or continue with calculations...');
+        rl.prompt();
     });
 }
 
