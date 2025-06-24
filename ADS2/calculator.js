@@ -1,9 +1,12 @@
+// REFERENCES:
+// https://www.youtube.com/watch?v=8QrlSSgRC3s 
+// https://www.youtube.com/watch?v=E4ZmJZfGYq4
+// https://www.youtube.com/watch?v=hjY1btZ7UD4 
+
 //Postfix++ Calculator 
 const readline = require('readline');
 
-/**
- * Stack implementation 
- */
+//Stack implementation 
 class Stack {
     constructor() {
         this.items = [];
@@ -495,7 +498,7 @@ class PostfixCalculator {
         if (this.stack.size() < 2) {
             throw new Error('Assignment requires variable name and value on stack');
         }
-        
+
         // pop in reverse order: value comes off first, then variable
         const value = this.stack.pop();
         const variableName = this.stack.pop();
@@ -646,11 +649,15 @@ function startInteractiveMode() {
         prompt: '> '
     });
 
-    console.log('Postfix++ Calculator - Enhanced Version');
-    console.log('Enter expressions or commands:');
+    console.log('Postfix++ Calculator');
+    console.log('Enter expressions/commands:');
+    console.log('');
     console.log('Basic: "1 1 +", "A 5 =", "A B *"');
+    console.log('');
     console.log('Advanced: "2 3 ^", "25 sqrt", "5 !", "pi 2 *", "45 sin"');
+    console.log('');
     console.log('Commands:\n HELP: .help,\n CHECK VARIABLES: .vars,\n STACK: .stack,\n CLEAR: .clear,\n DELETE: .delete <var>,\n SEARCH: .get <var>,\n QUIT: CRTL + C, .Q');
+    console.log('');
     console.log('Note: Angles for trig functions are in radians');
     console.log('');
 
@@ -668,8 +675,8 @@ function startInteractiveMode() {
                     console.log('Commands:');
                     console.log('  .help         - Show this help');
                     console.log('  .vars         - Show all variables');
-                    console.log('  .get <var>    - Show value of a variable without affecting stack');
-                    console.log('  .stack        - Show current stack (bottom to top, left to right)');
+                    console.log('  .get <var>    - Search for value of a variable');
+                    console.log('  .stack        - Show current stack');
                     console.log('  .clear        - Clear calculator');
                     console.log('  .delete <var> - Delete a variable');
                     console.log('  .Q, CTRL+C - Exit calculator');
