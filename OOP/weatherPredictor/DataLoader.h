@@ -13,7 +13,7 @@ struct TemperatureRecord {
 };
 
 /**
- * DataLoader class for reading temperature data from a CSV file.
+ * DataLoader class to handle loading temperature data from a CSV file.
  */
 class DataLoader {
 public:
