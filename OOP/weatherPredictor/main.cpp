@@ -7,11 +7,20 @@
 #include "Prediction.h"
 
 int main() {
-    std::string filename = "weather_data.csv";
-    std::string country = "GB";       // Country code (Great Britain in this example)
-    int startYear = 1980;
-    int endYear = 2019;
-    // TODO: Optionally, allow user input for country code and date range instead of hardcoding.
+    std::string filename = "weather_data_EU_1980-2019_temp_only.csv";
+    std::string country;
+    int startYear, endYear;
+    
+    // Get user input
+    std::cout << "Available countries: AT, BE, BG, GB, etc.\n";
+    std::cout << "Enter country code: ";
+    std::cin >> country;
+    
+    std::cout << "Enter start year: ";
+    std::cin >> startYear;
+    
+    std::cout << "Enter end year: ";
+    std::cin >> endYear;
 
     // 1. Load raw temperature data for the specified country and year range
     std::vector<TemperatureRecord> records = DataLoader::loadCSV(filename, country, startYear, endYear);
