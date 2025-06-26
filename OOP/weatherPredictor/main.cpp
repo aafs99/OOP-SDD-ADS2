@@ -37,7 +37,7 @@ int main() {
 
         // 3. Plot the candlestick data as text output
         std::cout << "\nCandlestick chart for " << country << " (" << startYear << "-" << endYear << "):\n";
-        Plotter::plotCandlesticks(candlesticks);
+        Plotter::plotCandlesticks(candlesticks, TimeFrame::Yearly, 20);
 
         // 4. Demonstrate filtering
         if (endYear - startYear >= 10) {  // Only filter if we have enough years
@@ -50,7 +50,7 @@ int main() {
             std::vector<Candlestick> filtered = DataFilter::filterByDateRange(candlesticks, filterStart, filterEnd);
             std::cout << "\nFiltered candlestick chart for " << country 
                       << " (" << filterStartYear << " to " << filterEndYear << "):\n";
-            Plotter::plotCandlesticks(filtered);
+            Plotter::plotCandlesticks(filtered, TimeFrame::Yearly, 20);
         }
 
         // 5. Predict future temperature trend using different models

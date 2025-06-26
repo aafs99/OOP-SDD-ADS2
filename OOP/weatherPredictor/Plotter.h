@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include "Candlestick.h"
+#include "CandlestickCalculator.h" // Needed for the TimeFrame enum
 
 /**
  * Plotter class to generate text-based candlestick charts.
@@ -13,44 +14,40 @@ class Plotter {
 public:
     /**
      * Outputs a text-based candlestick chart to the console.
-     * Shows temperature scale on left, candlesticks in middle, dates at bottom.
-     * 
-     * Chart symbols:
-     * - '|' represents the wick (high-low range)
-     * - '+++' represents up-trend body (close >= open)
-     * - '---' represents down-trend body (close < open)
-     * 
-     * @param candlesticks Vector of Candlestick objects to visualize
+     * This improved version supports different timeframes, colors, and dynamic height.
+     * * @param candlesticks The vector of Candlestick objects to visualize.
+     * @param timeframe The time unit of the data (Yearly, Monthly, Daily) for correct axis labeling.
+     * @param chartHeight The desired height of the chart in characters (rows).
      */
-    static void plotCandlesticks(const std::vector<Candlestick>& candlesticks);
+    static void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe, int chartHeight = 20);
 
 private:
     /**
      * Gets the visual representation of a candlestick at a specific temperature row.
-     * @param candle The candlestick to represent
-     * @param rowTemp The temperature level of the current row
-     * @param tempPerRow Temperature range represented by each row
-     * @return String representation (3 characters) for this candlestick at this level
+     * @param candle The candlestick to represent.
+     * @param rowTemp The temperature level of the current row.
+     * @param tempPerRow Temperature range represented by each row.
+     * @return String representation for this candlestick at this level, including color codes.
      */
     static std::string getCandlestickAtRow(const Candlestick& candle, double rowTemp, double tempPerRow);
     
     /**
      * Finds the minimum temperature across all candlesticks.
-     * @param candlesticks Vector of candlestick data
-     * @return Minimum temperature found
+     * @param candlesticks Vector of candlestick data.
+     * @return Minimum temperature found.
      */
     static double findMinTemperature(const std::vector<Candlestick>& candlesticks);
     
     /**
      * Finds the maximum temperature across all candlesticks.
-     * @param candlesticks Vector of candlestick data
-     * @return Maximum temperature found
+     * @param candlesticks Vector of candlestick data.
+     * @return Maximum temperature found.
      */
     static double findMaxTemperature(const std::vector<Candlestick>& candlesticks);
     
     /**
      * Prints summary statistics about the candlestick data.
-     * @param candlesticks Vector of candlestick data
+     * @param candlesticks Vector of candlestick data.
      */
     static void printSummary(const std::vector<Candlestick>& candlesticks);
 };
