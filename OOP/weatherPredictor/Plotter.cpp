@@ -163,8 +163,8 @@ namespace {
             if (monthNum >= 1 && monthNum <= 12) {
                 switch (timeframe) {
                     case TimeFrame::Daily:   return monthNames[monthNum - 1] + "'" + shortYear;
-                    case TimeFrame::Monthly: return monthNames[monthNum - 1] + " " + year;
-                    case TimeFrame::Yearly:  return year;
+                    case TimeFrame::Monthly: return monthNames[monthNum - 1] + " " + shortYear;
+                    case TimeFrame::Yearly:  return "'" + shortYear;
                 }
             }
         } catch (...) { /* Fallback below */ }
@@ -172,6 +172,7 @@ namespace {
         // Fallback to numeric format if something fails
         return date.substr(0, 7);
     }
+
 
     std::string getCandlestickAtRow(const Candlestick& candle, double rowTemp, double tempPerRow, const PlotConfiguration& config) {
         double high = candle.getHigh();
@@ -183,6 +184,7 @@ namespace {
         double bodyBottom = std::min(open, close);
         double tolerance = tempPerRow / 2.0;
 
+        
         if (rowTemp <= bodyTop + tolerance && rowTemp >= bodyBottom - tolerance) {
             return candle.isUptrend() ? (ANSI_COLOR_GREEN + config.upTrendBody + ANSI_COLOR_RESET) 
                                       : (ANSI_COLOR_RED + config.downTrendBody + ANSI_COLOR_RESET);

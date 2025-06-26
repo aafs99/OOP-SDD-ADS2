@@ -95,9 +95,6 @@ void Prediction::displayPredictionResults(const std::vector<Candlestick>& data,
 
     // 1. Linear Regression
     std::cout << "1. LINEAR REGRESSION MODEL\n";
-    std::cout << "   Method: Least squares trend line fitting\n";
-    std::cout << "   Calculation: y = mx + b, where m = slope, b = intercept\n";
-    std::cout << "   Justification: Identifies long-term temperature trends from historical data\n";
     std::cout << "   Result: " << std::fixed << std::setprecision(2) << linearPred << "°C\n";
     std::cout << "   Confidence (R²): " << std::fixed << std::setprecision(3) << rSquared;
     if (rSquared > 0.7) {
@@ -110,9 +107,6 @@ void Prediction::displayPredictionResults(const std::vector<Candlestick>& data,
 
     // 2. Moving Average
     std::cout << "2. MOVING AVERAGE MODEL (3-period)\n";
-    std::cout << "   Method: Average of recent temperature values\n";
-    std::cout << "   Calculation: (T₁ + T₂ + T₃) / 3\n";
-    std::cout << "   Justification: Smooths short-term fluctuations, provides stable forecast\n";
     std::cout << "   Result: " << std::fixed << std::setprecision(2) << movingAvg << "°C\n";
     
     // Show the actual calculation
@@ -129,9 +123,6 @@ void Prediction::displayPredictionResults(const std::vector<Candlestick>& data,
 
     // 3. Heuristic (Momentum)
     std::cout << "3. HEURISTIC (MOMENTUM) MODEL\n";
-    std::cout << "   Method: Projects recent temperature change forward\n";
-    std::cout << "   Calculation: Next = Current + (Current - Previous)\n";
-    std::cout << "   Justification: Assumes recent momentum will continue\n";
     std::cout << "   Result: " << std::fixed << std::setprecision(2) << heuristic << "°C\n";
     
     // Show the actual calculation
