@@ -89,7 +89,7 @@ int main() {
                                                startDate, endDate, minTemp, maxTemp, 
                                                uptrend, minVolatility)) {
                     
-                    // Always apply the filter to the ORIGINAL, complete dataset
+                    // Always apply the filter to the complete dataset
                     std::vector<Candlestick> filtered = applyFilter(
                         candlesticks, filterType, startDate, endDate, 
                         minTemp, maxTemp, uptrend, minVolatility
