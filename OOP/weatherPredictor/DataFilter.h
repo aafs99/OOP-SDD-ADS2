@@ -1,40 +1,34 @@
-#ifndef DATAFILTER_H
-#define DATAFILTER_H
+#ifndef DATA_FILTER_H
+#define DATA_FILTER_H
 
 #include <vector>
 #include <string>
 #include "Candlestick.h"
 
-/**
- * DataFilter class to filter candlestick data based on criteria like date range.
- */
-class DataFilter {
-public:
-    /**
-     * Filter candlesticks by a date range [startDate, endDate] (inclusive).
-     * Dates are expected in "YYYY-MM-DD" format.
-     */
-    static std::vector<Candlestick> filterByDateRange(const std::vector<Candlestick>& data, const std::string& startDate, const std::string& endDate);
+namespace DataFilter {
+    std::vector<Candlestick> filterByDateRange(
+        const std::vector<Candlestick>& data, 
+        const std::string& startDate, 
+        const std::string& endDate
+    );
     
-    // TODO: Consider implementing these additional filter methods:
+    std::vector<Candlestick> filterByTemperatureRange(
+        const std::vector<Candlestick>& data, 
+        double minTemp, 
+        double maxTemp
+    );
     
-    /**
-     * Filter candlesticks by temperature range [minTemp, maxTemp] (inclusive).
-     * This could filter based on any of the OHLC values (e.g., high temperature).
-     */
-    // static std::vector<Candlestick> filterByTemperatureRange(const std::vector<Candlestick>& data, double minTemp, double maxTemp);
+    std::vector<Candlestick> filterByTrend(
+        const std::vector<Candlestick>& data, 
+        bool uptrend
+    );
     
-    /**
-     * Filter candlesticks by trend (rising or falling).
-     * A rising trend means close >= open, falling means close < open.
-     */
-    // static std::vector<Candlestick> filterByTrend(const std::vector<Candlestick>& data, bool risingTrend);
+    std::vector<Candlestick> filterByVolatility(
+        const std::vector<Candlestick>& data, 
+        double minVolatility
+    );
     
-    /**
-     * Filter candlesticks by volatility (difference between high and low).
-     * Returns candlesticks where (high - low) >= minVolatility.
-     */
-    // static std::vector<Candlestick> filterByVolatility(const std::vector<Candlestick>& data, double minVolatility);
-};
+    void printFilterStats(size_t original, size_t filtered, const std::string& filterName);
+}
 
 #endif

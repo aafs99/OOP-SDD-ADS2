@@ -3,27 +3,29 @@
 
 #include <string>
 
-/**
- * Candlestick class to hold aggregated temperature data (Open, High, Low, Close) for a time period.
- */
 class Candlestick {
 private:
-    std::string date;   // Label date for the time period (e.g., "1980-01-01" for year 1980)
-    double open;
-    double close;
-    double high;
-    double low;
+    std::string date_;
+    double open_;
+    double close_;
+    double high_;
+    double low_;
+
 public:
-    // Constructors
     Candlestick();
     Candlestick(const std::string& date, double open, double close, double high, double low);
 
-    // Accessors
-    std::string getDate() const;
-    double getOpen() const;
-    double getClose() const;
-    double getHigh() const;
-    double getLow() const;
+    // Getters
+    std::string getDate() const { return date_; }
+    double getOpen() const { return open_; }
+    double getClose() const { return close_; }
+    double getHigh() const { return high_; }
+    double getLow() const { return low_; }
+    
+    // Utility methods
+    bool isUptrend() const { return close_ >= open_; }
+    double getVolatility() const { return high_ - low_; }
+    double getAverage() const { return close_; } // Using close as average temperature
 };
 
 #endif
