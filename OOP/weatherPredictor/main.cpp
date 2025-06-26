@@ -11,8 +11,9 @@
 #include "UserInput.h"
 
 namespace {
+    // Helper function to apply a chosen filter to a dataset
     std::vector<Candlestick> applyFilter(
-        const std::vector<Candlestick>& data,
+        const std::vector<Candlestick>& data, // The source data to filter
         FilterType filterType,
         const std::string& startDate,
         const std::string& endDate,
@@ -32,7 +33,7 @@ namespace {
                 return DataFilter::filterByVolatility(data, minVolatility);
             default:
                 std::cout << "Error: Invalid filter type.\n";
-                return data;
+                return data; // Return original data if filter type is invalid
         }
     }
 }
@@ -41,13 +42,12 @@ int main() {
     const std::string filename = "weather_data_EU_1980-2019_temp_only.csv";
     
     try {
-        // Get user input
+        // --- User Input & Data Loading ---
         std::string country = UserInput::getCountryCode();
         int startYear, endYear;
         UserInput::getYearRange(startYear, endYear);
         TimeFrame timeframe = UserInput::getTimeFrame();
         
-        // Load data
         std::vector<TemperatureRecord> records = DataLoader::loadCSV(filename, country, startYear, endYear);
         std::cout << "Loaded " << records.size() << " records for " << country 
                   << " from " << startYear << " to " << endYear << ".\n";
@@ -57,8 +57,8 @@ int main() {
             return 1;
         }
 
-        // Compute candlesticks
-        std::vector<Candlestick> candlesticks = CandlestickCalculator::computeCandlesticks(records, timeframe);
+        // --- Candlestick Calculation ---
+        const std::vector<Candlestick> candlesticks = CandlestickCalculator::computeCandlesticks(records, timeframe); // This is the original, immutable dataset
         std::cout << "Computed " << candlesticks.size() << " candlestick entries using " 
                   << Utils::timeFrameToString(timeframe) << " aggregation.\n";
 
@@ -67,56 +67,65 @@ int main() {
             return 1;
         }
 
-        // Plot full dataset
+        // --- Initial Plot of Full Dataset ---
         std::cout << "\n" << Utils::timeFrameToString(timeframe) << " candlestick chart for " 
                   << country << " (" << startYear << "-" << endYear << ") - Full Dataset:\n";
         Plotter::plotCandlesticks(candlesticks, timeframe, 20);
 
-        // Apply filters if requested
-        std::vector<Candlestick> dataForAnalysis = candlesticks;
+        // --- Filtering Loop ---
+        std::vector<Candlestick> dataForAnalysis = candlesticks; // Initially, the analysis data is the full dataset
         int filtersApplied = 0;
         
-        while (UserInput::askForFiltering()) {
-            FilterType filterType;
-            std::string startDate, endDate;
-            double minTemp, maxTemp, minVolatility;
-            bool uptrend;
-            
-            if (UserInput::getFilterCriteria(dataForAnalysis, timeframe, filterType, 
-                                           startDate, endDate, minTemp, maxTemp, 
-                                           uptrend, minVolatility)) {
+        // Ask ONCE if the user wants to start filtering.
+        if (UserInput::askForFiltering()) {
+            while (true) { // Loop for applying multiple filters
+                FilterType filterType;
+                std::string startDate, endDate;
+                double minTemp, maxTemp, minVolatility;
+                bool uptrend;
                 
-                std::vector<Candlestick> filtered = applyFilter(
-                    dataForAnalysis, filterType, startDate, endDate, 
-                    minTemp, maxTemp, uptrend, minVolatility
-                );
-                
-                if (!filtered.empty() && filtered.size() < dataForAnalysis.size()) {
-                    dataForAnalysis = filtered;
-                    filtersApplied++;
+                // Get criteria based on the ORIGINAL data to show full ranges
+                if (UserInput::getFilterCriteria(candlesticks, timeframe, filterType, 
+                                               startDate, endDate, minTemp, maxTemp, 
+                                               uptrend, minVolatility)) {
                     
-                    std::cout << "\nFiltered " << Utils::timeFrameToString(timeframe) 
-                              << " candlestick chart for " << country 
-                              << " (Filter " << filtersApplied << " applied):\n";
-                    Plotter::plotCandlesticks(filtered, timeframe, 20);
+                    // Always apply the filter to the ORIGINAL, complete dataset
+                    std::vector<Candlestick> filtered = applyFilter(
+                        candlesticks, filterType, startDate, endDate, 
+                        minTemp, maxTemp, uptrend, minVolatility
+                    );
                     
-                    if (!UserInput::askToContinue("apply another filter")) {
-                        break;
+                    if (!filtered.empty()) {
+                        dataForAnalysis = filtered; // Update the data to be shown
+                        filtersApplied++;
+                        
+                        std::cout << "\nFiltered " << Utils::timeFrameToString(timeframe) 
+                                  << " candlestick chart for " << country 
+                                  << " (Filter " << filtersApplied << " applied:\n";
+                        Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
+                        
+                    } else {
+                        std::cout << "\nFilter resulted in no data. Showing previous view.\n";
+                        Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
                     }
-                } else if (filtered.empty()) {
-                    std::cout << "\nFilter resulted in no data. Using previous dataset.\n";
-                } else {
-                    std::cout << "\nFilter did not reduce dataset. Using previous dataset.\n";
+                }
+
+                // Ask if the user wants to apply ANOTHER filter. If not, exit the loop.
+                if (!UserInput::askToContinue("apply another filter")) {
+                    break;
                 }
             }
         }
         
+        // --- Final Summary ---
         std::cout << "\n=== Analysis Complete ===\n";
         std::cout << "Country: " << country << "\n";
         std::cout << "Timeframe: " << Utils::timeFrameToString(timeframe) << "\n";
         std::cout << "Original dataset: " << candlesticks.size() << " periods\n";
         std::cout << "Filters applied: " << filtersApplied << "\n";
-        std::cout << "Final dataset: " << dataForAnalysis.size() << " periods\n";
+        if (filtersApplied > 0) {
+            std::cout << "Final dataset view: " << dataForAnalysis.size() << " periods\n";
+        }
         
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
