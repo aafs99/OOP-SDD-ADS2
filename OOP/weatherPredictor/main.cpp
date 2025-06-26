@@ -38,122 +38,17 @@ namespace {
         }
     }
 
-    // Helper function to display prediction results
+    // Helper function to display prediction analysis
     void displayPredictions(const std::vector<Candlestick>& data, TimeFrame timeframe, 
-                          const std::string& country, const std::string& dataDescription) {
+                          const std::string& country, const std::string& dataDescription,
+                          int startYear, int endYear) {
         if (data.empty()) {
             std::cout << "Cannot generate predictions: No data available.\n";
             return;
         }
 
-        std::cout << "\n=== Temperature Predictions ===\n";
-        std::cout << "Based on " << dataDescription << " for " << country << "\n";
-        std::cout << "Data points used: " << data.size() << " " << Utils::timeFrameToString(timeframe) << " periods\n\n";
-
-        // Generate predictions using all three models
-        double linearPred = Prediction::predictLinear(data);
-        double movingAvg3 = Prediction::predictMovingAverage(data, 3);
-        double movingAvg5 = Prediction::predictMovingAverage(data, 5);
-        double heuristicPred = Prediction::predictHeuristic(data);
-
-        // Calculate confidence metrics
-        double rSquared = Prediction::calculateLinearRSquared(data);
-        
-        // Display predictions in a formatted table
-        std::cout << std::left << std::setw(25) << "Prediction Model" 
-                  << std::setw(15) << "Next Period" 
-                  << std::setw(20) << "Best Used For" 
-                  << std::setw(15) << "Confidence" << "\n";
-        std::cout << std::string(75, '-') << "\n";
-        
-        std::cout << std::left << std::setw(25) << "Linear Regression" 
-                  << std::setw(15) << (std::to_string(linearPred).substr(0,5) + "°C")
-                  << std::setw(20) << "Long-term trends"
-                  << std::setw(15) << ("R² = " + std::to_string(rSquared).substr(0,4)) << "\n";
-        
-        std::cout << std::left << std::setw(25) << "Moving Average (3-period)" 
-                  << std::setw(15) << (std::to_string(movingAvg3).substr(0,5) + "°C")
-                  << std::setw(20) << "Smoothed forecast"
-                  << std::setw(15) << "Stable" << "\n";
-        
-        std::cout << std::left << std::setw(25) << "Moving Average (5-period)" 
-                  << std::setw(15) << (std::to_string(movingAvg5).substr(0,5) + "°C")
-                  << std::setw(20) << "Very smooth"
-                  << std::setw(15) << "Very stable" << "\n";
-        
-        std::cout << std::left << std::setw(25) << "Momentum (Heuristic)" 
-                  << std::setw(15) << (std::to_string(heuristicPred).substr(0,5) + "°C")
-                  << std::setw(20) << "Recent trends"
-                  << std::setw(15) << "Reactive" << "\n";
-
-        std::cout << "\n";
-
-        // Provide interpretation guidance
-        std::cout << "=== Prediction Interpretation ===\n";
-        
-        // Linear regression analysis
-        if (rSquared > 0.7) {
-            std::cout << "✓ Linear trend is STRONG (R² > 0.7) - Linear regression prediction is reliable\n";
-        } else if (rSquared > 0.4) {
-            std::cout << "⚠ Linear trend is MODERATE (R² > 0.4) - Consider multiple models\n";
-        } else {
-            std::cout << "⚠ Linear trend is WEAK (R² < 0.4) - Linear prediction may be unreliable\n";
-        }
-
-        // Calculate recent volatility for additional context
-        if (data.size() >= 3) {
-            double recentVolatility = 0.0;
-            int volatilityPeriods = std::min(5, static_cast<int>(data.size()));
-            for (int i = data.size() - volatilityPeriods; i < static_cast<int>(data.size()); i++) {
-                recentVolatility += data[i].getVolatility();
-            }
-            recentVolatility /= volatilityPeriods;
-
-            std::cout << "Recent volatility: " << std::fixed << std::setprecision(1) 
-                      << recentVolatility << "°C (avg of last " << volatilityPeriods << " periods)\n";
-        }
-
-        // Trend direction analysis
-        if (data.size() >= 2) {
-            double recentChange = data.back().getClose() - data[data.size()-2].getClose();
-            std::cout << "Recent trend: " << (recentChange > 0 ? "↗ Warming" : recentChange < 0 ? "↘ Cooling" : "→ Stable");
-            std::cout << " (" << std::showpos << std::fixed << std::setprecision(1) << recentChange << "°C)\n";
-        }
-
-        std::cout << "\n";
-
-        // Model recommendation based on data characteristics
-        std::cout << "=== Recommendation ===\n";
-        if (rSquared > 0.6) {
-            std::cout << "🎯 RECOMMENDED: Use Linear Regression (strong trend detected)\n";
-        } else if (data.size() >= 5) {
-            std::cout << "🎯 RECOMMENDED: Use Moving Average (data shows variability)\n";
-        } else {
-            std::cout << "🎯 RECOMMENDED: Use Multiple Models (limited data - compare results)\n";
-        }
-
-        // Test prediction accuracy if enough data
-        if (data.size() >= 8) {
-            std::cout << "\n=== Model Accuracy Test ===\n";
-            std::cout << "Testing on last 3 periods of historical data:\n";
-            
-            std::vector<double> errors3 = Prediction::calculateMovingAverageErrors(data, 3, 3);
-            std::vector<double> errors5 = Prediction::calculateMovingAverageErrors(data, 5, 3);
-            
-            if (!errors3.empty()) {
-                double mae3 = PredictionUtils::calculateMAE(errors3);
-                std::cout << "3-period Moving Average MAE: " << std::fixed << std::setprecision(2) << mae3 << "°C\n";
-            }
-            
-            if (!errors5.empty()) {
-                double mae5 = PredictionUtils::calculateMAE(errors5);
-                std::cout << "5-period Moving Average MAE: " << std::fixed << std::setprecision(2) << mae5 << "°C\n";
-            }
-            
-            std::cout << "(Lower MAE = better accuracy)\n";
-        }
-
-        std::cout << "\n";
+        // prediction display
+        Prediction::displayPredictionResults(data, timeframe, country, startYear, endYear);
     }
 }
 
@@ -244,18 +139,18 @@ int main() {
                                 (filtersApplied > 1 ? "s" : "") + " applied)";
             }
             
-            displayPredictions(dataForAnalysis, timeframe, country, dataDescription);
+            displayPredictions(dataForAnalysis, timeframe, country, dataDescription, startYear, endYear);
             
             // Option to see predictions for original data if filters were applied
             if (filtersApplied > 0 && dataForAnalysis.size() != candlesticks.size()) {
                 if (UserInput::askToContinue("see predictions for the complete (unfiltered) dataset")) {
-                    displayPredictions(candlesticks, timeframe, country, "complete dataset");
+                    displayPredictions(candlesticks, timeframe, country, "complete dataset", startYear, endYear);
                 }
             }
         }
         
         // --- Final Summary ---
-        std::cout << "\n=== Analysis Complete ===\n";
+        std::cout << "\n=== Analysis Complete ===\n";        
         std::cout << "\nThank you for using the Temperature Analysis Tool!\n";
         
     } catch (const std::exception& e) {

@@ -134,11 +134,10 @@ bool askForPredictions() {
     std::string choice;
     
     std::cout << "\n=== Temperature Predictions ===\n";
-    std::cout << "Generate forecasts using advanced prediction models:\n";
+    std::cout << "Generate temperature forecasts using prediction models:\n";
     std::cout << "  • Linear Regression: Identifies long-term temperature trends\n";
     std::cout << "  • Moving Average: Smooths short-term fluctuations for stable forecasts\n";
     std::cout << "  • Momentum Model: Projects recent temperature changes forward\n";
-    std::cout << "  • Model Validation: Tests prediction accuracy on historical data\n";
     std::cout << "\nWould you like to generate temperature predictions? (y/n): ";
     
     while (true) {
