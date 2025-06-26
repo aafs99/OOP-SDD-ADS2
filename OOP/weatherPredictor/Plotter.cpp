@@ -57,12 +57,18 @@ namespace {
     };
 
     const CompressionLevel COMPRESSION_LEVELS[] = {
-        {5, 2, "Standard"},
-        {3, 1, "Compact"},
-        {1, 1, "Dense"},
-        {1, 0, "Ultra-dense"}
+        {5, 2, "Standard"},      // 7 chars per candle
+        {3, 1, "Compact"},       // 4 chars per candle  
+        {2, 1, "Dense"},         // 3 chars per candle
+        {1, 1, "Very Dense"},    // 2 chars per candle
+        {1, 0, "Ultra Dense"}    // 1 char per candle
     };
     const int NUM_COMPRESSION_LEVELS = sizeof(COMPRESSION_LEVELS) / sizeof(COMPRESSION_LEVELS[0]);
+
+    // Sampling thresholds - when to start skipping data points
+    const size_t MAX_CANDLESTICKS_DAILY = 200;     // About 6-7 months of daily data
+    const size_t MAX_CANDLESTICKS_MONTHLY = 120;   // About 10 years of monthly data
+    const size_t MAX_CANDLESTICKS_YEARLY = 80;     // 80 years of yearly data
 }
 
 void Plotter::plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe, int chartHeight) {
@@ -74,12 +80,16 @@ void Plotter::plotCandlesticks(const std::vector<Candlestick>& candlesticks, Tim
     // Ensure minimum chart height for readability
     chartHeight = std::max(chartHeight, 5);
 
+    // Apply intelligent sampling if we have too many data points
+    std::vector<Candlestick> displayData = applyIntelligentSampling(candlesticks, timeframe);
+    bool wasDownsampled = displayData.size() < candlesticks.size();
+
     // Determine optimal compression level
-    PlotConfiguration config = determineOptimalCompression(candlesticks.size());
+    PlotConfiguration config = determineOptimalCompression(displayData.size(), timeframe);
 
     // Calculate temperature range for the chart
-    double minTemp = findMinTemperature(candlesticks);
-    double maxTemp = findMaxTemperature(candlesticks);
+    double minTemp = findMinTemperature(displayData);
+    double maxTemp = findMaxTemperature(displayData);
     
     // Add padding to the temperature range
     double range = maxTemp - minTemp;
@@ -92,7 +102,7 @@ void Plotter::plotCandlesticks(const std::vector<Candlestick>& candlesticks, Tim
     double tempPerRow = range / (chartHeight - 1);
     
     // Display chart header and legend
-    printChartHeader(config);
+    printChartHeader(config, wasDownsampled, candlesticks.size(), displayData.size());
     
     // Draw the chart row by row
     for (int row = 0; row < chartHeight; ++row) {
@@ -103,7 +113,7 @@ void Plotter::plotCandlesticks(const std::vector<Candlestick>& candlesticks, Tim
                   << std::fixed << std::setprecision(1) << currentTemp << "| ";
         
         // Print candlesticks for this temperature level
-        for (const auto& candle : candlesticks) {
+        for (const auto& candle : displayData) {
             std::cout << getCandlestickAtRow(candle, currentTemp, tempPerRow, config) 
                       << config.spacingStr;
         }
@@ -111,11 +121,51 @@ void Plotter::plotCandlesticks(const std::vector<Candlestick>& candlesticks, Tim
     }
     
     // Draw bottom border and X-axis labels
-    printXAxisLabels(candlesticks, timeframe, config);
-    printSummary(candlesticks);
+    printXAxisLabels(displayData, timeframe, config);
+    printSummary(displayData);
 }
 
-PlotConfiguration Plotter::determineOptimalCompression(size_t numCandlesticks) {
+std::vector<Candlestick> Plotter::applyIntelligentSampling(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe) {
+    size_t maxCandlesticks;
+    
+    // Set maximum based on timeframe
+    switch (timeframe) {
+        case TimeFrame::Daily:
+            maxCandlesticks = MAX_CANDLESTICKS_DAILY;
+            break;
+        case TimeFrame::Monthly:
+            maxCandlesticks = MAX_CANDLESTICKS_MONTHLY;
+            break;
+        case TimeFrame::Yearly:
+            maxCandlesticks = MAX_CANDLESTICKS_YEARLY;
+            break;
+        default:
+            maxCandlesticks = MAX_CANDLESTICKS_YEARLY;
+            break;
+    }
+    
+    // If we have fewer candlesticks than the limit, return all
+    if (candlesticks.size() <= maxCandlesticks) {
+        return candlesticks;
+    }
+    
+    // Calculate sampling interval
+    double interval = static_cast<double>(candlesticks.size()) / maxCandlesticks;
+    std::vector<Candlestick> sampled;
+    sampled.reserve(maxCandlesticks);
+    
+    // Sample data points evenly across the dataset
+    for (size_t i = 0; i < maxCandlesticks; ++i) {
+        size_t index = static_cast<size_t>(i * interval);
+        if (index < candlesticks.size()) {
+            sampled.push_back(candlesticks[index]);
+        }
+    }
+    
+    return sampled;
+}
+
+PlotConfiguration Plotter::determineOptimalCompression(size_t numCandlesticks, TimeFrame timeframe) {
     // Try each compression level to find the best fit
     for (int i = 0; i < NUM_COMPRESSION_LEVELS; ++i) {
         const auto& level = COMPRESSION_LEVELS[i];
@@ -131,8 +181,14 @@ PlotConfiguration Plotter::determineOptimalCompression(size_t numCandlesticks) {
     return PlotConfiguration(1, 0);
 }
 
-void Plotter::printChartHeader(const PlotConfiguration& config) {
+void Plotter::printChartHeader(const PlotConfiguration& config, bool wasDownsampled, size_t originalSize, size_t displaySize) {
     std::cout << "\n=== ASCII Candlestick Chart ===\n";
+    
+    if (wasDownsampled) {
+        std::cout << "Note: Showing " << displaySize << " of " << originalSize 
+                  << " data points (sampled for display clarity)\n";
+    }
+    
     std::cout << "Legend: Wick: |, Up-Trend: " << ANSI_COLOR_GREEN << config.upTrendBody 
               << ANSI_COLOR_RESET << ", Down-Trend: " << ANSI_COLOR_RED << config.downTrendBody 
               << ANSI_COLOR_RESET << "\n\n";

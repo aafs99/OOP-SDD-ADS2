@@ -29,19 +29,34 @@ public:
 
 private:
     /**
-     * Determines the optimal compression level based on number of candlesticks.
+     * Applies intelligent sampling to reduce the number of candlesticks for display.
+     * Uses timeframe-appropriate limits to ensure readable charts.
      * 
-     * @param numCandlesticks Number of candlesticks to display
-     * @return PlotConfiguration with optimal width and spacing settings
+     * @param candlesticks Original candlestick data
+     * @param timeframe Current timeframe (affects sampling limits)
+     * @return Sampled candlestick data for display
      */
-    static PlotConfiguration determineOptimalCompression(size_t numCandlesticks);
+    static std::vector<Candlestick> applyIntelligentSampling(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe);
 
     /**
-     * Prints the chart header with title and legend.
+     * Determines the optimal compression level based on number of candlesticks and timeframe.
+     * 
+     * @param numCandlesticks Number of candlesticks to display
+     * @param timeframe The timeframe affects compression aggressiveness
+     * @return PlotConfiguration with optimal width and spacing settings
+     */
+    static PlotConfiguration determineOptimalCompression(size_t numCandlesticks, TimeFrame timeframe);
+
+    /**
+     * Prints the chart header with title, legend, and sampling information.
      * 
      * @param config Plot configuration containing display settings
+     * @param wasDownsampled Whether data was sampled for display
+     * @param originalSize Original number of data points
+     * @param displaySize Number of data points being displayed
      */
-    static void printChartHeader(const PlotConfiguration& config);
+    static void printChartHeader(const PlotConfiguration& config, bool wasDownsampled = false, 
+                                size_t originalSize = 0, size_t displaySize = 0);
 
     /**
      * Prints the X-axis labels and bottom border of the chart.
