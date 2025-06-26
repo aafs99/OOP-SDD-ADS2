@@ -68,8 +68,8 @@ int main() {
         }
 
         // --- Initial Plot of Full Dataset ---
-        std::cout << "\n" << Utils::timeFrameToString(timeframe) << " candlestick chart for " 
-                  << country << " (" << startYear << "-" << endYear << ") - Full Dataset:\n";
+        std::cout << "\n ==== " << Utils::timeFrameToString(timeframe) << " Candlestick Chart for " 
+                  << country << " (" << startYear << "-" << endYear << ") ====\n\n";
         Plotter::plotCandlesticks(candlesticks, timeframe, 20);
 
         // --- Filtering Loop ---
@@ -100,8 +100,8 @@ int main() {
                         filtersApplied++;
                         
                         std::cout << "\nFiltered " << Utils::timeFrameToString(timeframe) 
-                                  << " candlestick chart for " << country 
-                                  << " (Filter " << filtersApplied << " applied:\n";
+                                  << " ==== Candlestick Chart for " << country 
+                                  << " (Filter " << filtersApplied << " applied: ===\n";
                         Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
                         
                     } else {
@@ -118,14 +118,7 @@ int main() {
         }
         
         // --- Final Summary ---
-        std::cout << "\n=== Analysis Complete ===\n";
-        std::cout << "Country: " << country << "\n";
-        std::cout << "Timeframe: " << Utils::timeFrameToString(timeframe) << "\n";
-        std::cout << "Original dataset: " << candlesticks.size() << " periods\n";
-        std::cout << "Filters applied: " << filtersApplied << "\n";
-        if (filtersApplied > 0) {
-            std::cout << "Final dataset view: " << dataForAnalysis.size() << " periods\n";
-        }
+        std::cout << "\n=== Goodbye! ===\n";
         
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

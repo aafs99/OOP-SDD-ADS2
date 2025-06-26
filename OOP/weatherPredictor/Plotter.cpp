@@ -28,108 +28,149 @@ namespace {
     };
     const int NUM_COMPRESSION_LEVELS = sizeof(COMPRESSION_LEVELS) / sizeof(COMPRESSION_LEVELS[0]);
 
-    // Sampling thresholds
-    const size_t MAX_CANDLESTICKS_DAILY = 200;
-    const size_t MAX_CANDLESTICKS_MONTHLY = 120;
-    const size_t MAX_CANDLESTICKS_YEARLY = 80;
+    // Display strategy thresholds
+    const size_t PREFERRED_MAX_DISPLAY_POINTS = 60;
+    const size_t MODERATE_MAX_DISPLAY_POINTS = 100;
+    const size_t ABSOLUTE_MAX_DISPLAY_POINTS = 120;
 
-    // Helper function declarations (forward declaration not strictly needed here, but good practice)
-    std::vector<Candlestick> applyIntelligentSampling(const std::vector<Candlestick>&, TimeFrame);
-    PlotConfiguration determineOptimalCompression(size_t, TimeFrame);
-    void printChartHeader(const PlotConfiguration&, bool, size_t, size_t);
+    struct DisplayStrategy {
+        std::vector<Candlestick> data;
+        PlotConfiguration config;
+        bool wasSampled;
+        bool wasCompressed;
+        std::string compressionLevel;
+    };
+
+    // Forward declarations for helper functions
     void printXAxisLabels(const std::vector<Candlestick>&, TimeFrame, const PlotConfiguration&);
-    std::string getCandlestickAtRow(const Candlestick&, double, double, const PlotConfiguration&);
-    double findMinTemperature(const std::vector<Candlestick>&);
-    double findMaxTemperature(const std::vector<Candlestick>&);
-    void printSummary(const std::vector<Candlestick>&);
-
-    // Helper function implementations
-    std::vector<Candlestick> applyIntelligentSampling(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe) {
+    std::string formatDateLabel(const std::string& date, TimeFrame timeframe);
+    
+    /**
+     * @brief Determines the optimal display strategy combining sampling and compression.
+     */
+    DisplayStrategy determineDisplayStrategy(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe) {
+        DisplayStrategy strategy;
+        strategy.data = candlesticks;
+        strategy.wasSampled = false;
+        strategy.wasCompressed = false;
+        strategy.compressionLevel = "Standard";
+        
         if (candlesticks.empty()) {
-            return candlesticks;
+            strategy.config = PlotConfiguration(5, 2);
+            return strategy;
         }
         
-        size_t maxCandlesticks;
+        size_t dataSize = candlesticks.size();
+        size_t targetSize = dataSize;
+        int startCompressionLevel = 0;
         
-        switch (timeframe) {
-            case TimeFrame::Daily:   maxCandlesticks = MAX_CANDLESTICKS_DAILY;   break;
-            case TimeFrame::Monthly: maxCandlesticks = MAX_CANDLESTICKS_MONTHLY; break;
-            case TimeFrame::Yearly:  maxCandlesticks = MAX_CANDLESTICKS_YEARLY;  break;
-            default:                 maxCandlesticks = MAX_CANDLESTICKS_YEARLY;  break;
+        // Step 1: Determine if sampling or aggressive compression is needed based on data volume
+        if (dataSize > MODERATE_MAX_DISPLAY_POINTS) {
+            targetSize = ABSOLUTE_MAX_DISPLAY_POINTS;
+            strategy.wasSampled = true;
+            startCompressionLevel = 2; // Start with "Dense" for large datasets
+        } else if (dataSize > PREFERRED_MAX_DISPLAY_POINTS) {
+            startCompressionLevel = 1; // Start with "Compact" for medium datasets
         }
         
-        if (candlesticks.size() <= maxCandlesticks) {
-            return candlesticks;
-        }
-        
-        std::vector<Candlestick> sampled;
-        sampled.reserve(maxCandlesticks);
-        
-        for (size_t i = 0; i < maxCandlesticks && i < candlesticks.size(); ++i) {
-            size_t index = (i * candlesticks.size()) / maxCandlesticks;
-            if (index < candlesticks.size()) {
-                sampled.push_back(candlesticks[index]);
+        // Step 2: Apply sampling if needed
+        if (strategy.wasSampled) {
+            std::vector<Candlestick> sampled;
+            if (dataSize > 0) {
+                 sampled.reserve(targetSize);
+                for (size_t i = 0; i < targetSize; ++i) {
+                    size_t index = (i * (dataSize - 1)) / (targetSize - 1);
+                    sampled.push_back(candlesticks[index]);
+                }
             }
+            strategy.data = sampled;
+            dataSize = sampled.size();
         }
         
-        return sampled;
-    }
-
-    PlotConfiguration determineOptimalCompression(size_t numCandlesticks, TimeFrame timeframe) {
-        for (int i = 0; i < NUM_COMPRESSION_LEVELS; ++i) {
+        // Step 3: Find the best compression level that fits the screen width
+        int finalCompressionLevel = startCompressionLevel;
+        for (int i = startCompressionLevel; i < NUM_COMPRESSION_LEVELS; ++i) {
+            finalCompressionLevel = i;
             const auto& level = COMPRESSION_LEVELS[i];
-            int requiredWidth = numCandlesticks * (level.candleWidth + level.candleSpacing) + Y_AXIS_WIDTH;
-            
-            if (requiredWidth <= MAX_CHART_WIDTH || i == NUM_COMPRESSION_LEVELS - 1) {
-                return PlotConfiguration(level.candleWidth, level.candleSpacing);
+            int requiredWidth = dataSize * (level.candleWidth + level.candleSpacing) + Y_AXIS_WIDTH;
+            if (requiredWidth <= MAX_CHART_WIDTH) {
+                break; // This level fits
             }
         }
         
-        return PlotConfiguration(1, 0);
-    }
-
-    void printChartHeader(const PlotConfiguration& config, bool wasDownsampled, size_t originalSize, size_t displaySize) {
-        std::cout << "\n=== ASCII Candlestick Chart ===\n";
+        // Step 4: Apply final configuration
+        const auto& level = COMPRESSION_LEVELS[finalCompressionLevel];
+        strategy.config = PlotConfiguration(level.candleWidth, level.candleSpacing);
+        strategy.wasCompressed = (finalCompressionLevel > 0);
+        strategy.compressionLevel = level.description;
         
-        if (wasDownsampled) {
-            std::cout << "Note: Showing " << displaySize << " of " << originalSize 
-                      << " data points (sampled for display clarity)\n";
+        return strategy;
+    }
+    
+    /**
+     * @brief Prints an intelligent X-axis with labels at reasonable intervals.
+     */
+    void printXAxisLabels(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe, const PlotConfiguration& config) {
+        const int candleCharacterWidth = config.candleWidth + config.candleSpacing;
+        if (candlesticks.empty() || candleCharacterWidth == 0) {
+            std::cout << std::string(Y_AXIS_WIDTH, '-') << "\n\n";
+            return;
         }
-        
-        std::cout << "Legend: Wick: |, Up-Trend: " << ANSI_COLOR_GREEN << config.upTrendBody 
-                  << ANSI_COLOR_RESET << ", Down-Trend: " << ANSI_COLOR_RED << config.downTrendBody 
-                  << ANSI_COLOR_RESET << "\n\n";
-    }
 
-    std::string formatDateLabel(const std::string& date, TimeFrame timeframe, int maxWidth) {
+        const int totalChartWidth = candlesticks.size() * candleCharacterWidth;
+        std::cout << std::string(Y_AXIS_WIDTH, '-') << std::string(totalChartWidth, '-') << "\n";
+        std::cout << std::string(Y_AXIS_WIDTH, ' ');
+
+        // Calculate a reasonable number of labels to display to avoid clutter
+        const int minCharsPerLabel = 6; // e.g., "Jan'25"
+        int maxLabels = totalChartWidth / minCharsPerLabel;
+        maxLabels = std::max(2, maxLabels); // Ensure at least 2 labels (start and end)
+        
+        const int labelInterval = std::max(1, static_cast<int>(candlesticks.size() -1) / (maxLabels -1));
+        
+        for (size_t i = 0; i < candlesticks.size(); ++i) {
+            // Determine if a label should be printed at this position
+            bool isFirst = (i == 0);
+            bool isLast = (i == candlesticks.size() - 1);
+            bool atInterval = (labelInterval > 0 && i % labelInterval == 0);
+
+            if (isFirst || isLast || atInterval) {
+                std::string label = formatDateLabel(candlesticks[i].getDate(), timeframe);
+                label = label.substr(0, candleCharacterWidth); // Truncate label to fit
+                std::cout << std::left << std::setw(candleCharacterWidth) << label;
+            } else {
+                std::cout << std::string(candleCharacterWidth, ' '); // Print empty space
+            }
+        }
+
+        std::cout << "\n\n";
+    }
+    
+    /**
+     * @brief Formats a date string into a readable label based on the timeframe.
+     */
+    std::string formatDateLabel(const std::string& date, TimeFrame timeframe) {
         if (date.length() < 10) return date;
         
         std::string year = date.substr(0, 4);
         std::string month = date.substr(5, 2);
-        std::string day = date.substr(8, 2);
-        std::string label;
+        std::string shortYear = date.substr(2, 2);
         
-        switch (timeframe) {
-            case TimeFrame::Yearly:  label = (maxWidth < 4) ? "'" + year.substr(2, 2) : year; break;
-            case TimeFrame::Monthly: label = month + "/" + year.substr(2, 2); break;
-            case TimeFrame::Daily:   label = day + "/" + month; break;
-            default:                 label = year; break;
-        }
+        const std::string monthNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
         
-        return (label.length() > static_cast<size_t>(maxWidth)) ? label.substr(0, maxWidth) : label;
-    }
-
-    void printXAxisLabels(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe, const PlotConfiguration& config) {
-        const int totalChartWidth = candlesticks.size() * (config.candleWidth + config.candleSpacing);
+        try {
+            int monthNum = std::stoi(month);
+            if (monthNum >= 1 && monthNum <= 12) {
+                switch (timeframe) {
+                    case TimeFrame::Daily:   return monthNames[monthNum - 1] + "'" + shortYear;
+                    case TimeFrame::Monthly: return monthNames[monthNum - 1] + " " + year;
+                    case TimeFrame::Yearly:  return year;
+                }
+            }
+        } catch (...) { /* Fallback below */ }
         
-        std::cout << std::string(Y_AXIS_WIDTH, '-') << std::string(totalChartWidth, '-') << "\n";
-        
-        std::cout << std::string(Y_AXIS_WIDTH, ' ');
-        for (const auto& candle : candlesticks) {
-            std::string label = formatDateLabel(candle.getDate(), timeframe, config.candleWidth);
-            std::cout << std::setw(config.candleWidth) << std::left << label << config.spacingStr;
-        }
-        std::cout << "\n\n";
+        // Fallback to numeric format if something fails
+        return date.substr(0, 7);
     }
 
     std::string getCandlestickAtRow(const Candlestick& candle, double rowTemp, double tempPerRow, const PlotConfiguration& config) {
@@ -182,9 +223,13 @@ namespace {
         
         int downCount = candlesticks.size() - upCount;
         double upPercent = 100.0 * upCount / candlesticks.size();
+
+        // Print summary
+        std::cout << "Legend: Wick: |, Up-Trend: " << ANSI_COLOR_GREEN << PlotConfiguration().upTrendBody 
+        << ANSI_COLOR_RESET << ", Down-Trend: " << ANSI_COLOR_RED << PlotConfiguration().downTrendBody 
+        << ANSI_COLOR_RESET << "\n\n";
         
         std::cout << "Summary:\n";
-        std::cout << "  Total Periods: " << candlesticks.size() << "\n";
         std::cout << "  Up-Trends:     " << upCount << " (" << std::fixed << std::setprecision(1) << upPercent << "%)\n";
         std::cout << "  Down-Trends:   " << downCount << " (" << std::fixed << std::setprecision(1) << (100.0 - upPercent) << "%)\n\n";
     }
@@ -201,14 +246,10 @@ void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame ti
 
     chartHeight = std::max(chartHeight, 5);
 
-    // Call helper functions from the anonymous namespace
-    std::vector<Candlestick> displayData = applyIntelligentSampling(candlesticks, timeframe);
-    bool wasDownsampled = displayData.size() < candlesticks.size();
-
-    PlotConfiguration config = determineOptimalCompression(displayData.size(), timeframe);
-
-    double minTemp = findMinTemperature(displayData);
-    double maxTemp = findMaxTemperature(displayData);
+    DisplayStrategy strategy = determineDisplayStrategy(candlesticks, timeframe);
+    
+    double minTemp = findMinTemperature(strategy.data);
+    double maxTemp = findMaxTemperature(strategy.data);
     
     double range = maxTemp - minTemp;
     if (range <= 0) range = 1.0;
@@ -217,9 +258,7 @@ void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame ti
     maxTemp += range * PADDING_RATIO;
     range = maxTemp - minTemp;
     
-    double tempPerRow = range / (chartHeight - 1);
-    
-    printChartHeader(config, wasDownsampled, candlesticks.size(), displayData.size());
+    double tempPerRow = (chartHeight > 1) ? (range / (chartHeight - 1)) : 0;
     
     for (int row = 0; row < chartHeight; ++row) {
         double currentTemp = maxTemp - (row * tempPerRow);
@@ -227,15 +266,15 @@ void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame ti
         std::cout << std::right << std::setw(Y_AXIS_WIDTH - 2) 
                   << std::fixed << std::setprecision(1) << currentTemp << "| ";
         
-        for (const auto& candle : displayData) {
-            std::cout << getCandlestickAtRow(candle, currentTemp, tempPerRow, config) 
-                      << config.spacingStr;
+        for (const auto& candle : strategy.data) {
+            std::cout << getCandlestickAtRow(candle, currentTemp, tempPerRow, strategy.config) 
+                      << strategy.config.spacingStr;
         }
         std::cout << "\n";
     }
     
-    printXAxisLabels(displayData, timeframe, config);
-    printSummary(displayData);
+    printXAxisLabels(strategy.data, timeframe, strategy.config);
+    printSummary(strategy.data);
 }
 
 } // namespace Plotter
