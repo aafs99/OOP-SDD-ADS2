@@ -130,6 +130,29 @@ bool askForFiltering() {
     }
 }
 
+bool askForPredictions() {
+    std::string choice;
+    
+    std::cout << "\n=== Temperature Predictions ===\n";
+    std::cout << "Generate forecasts using advanced prediction models:\n";
+    std::cout << "  • Linear Regression: Identifies long-term temperature trends\n";
+    std::cout << "  • Moving Average: Smooths short-term fluctuations for stable forecasts\n";
+    std::cout << "  • Momentum Model: Projects recent temperature changes forward\n";
+    std::cout << "  • Model Validation: Tests prediction accuracy on historical data\n";
+    std::cout << "\nWould you like to generate temperature predictions? (y/n): ";
+    
+    while (true) {
+        std::cin >> choice;
+        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
+        
+        if (choice == "y" || choice == "yes") return true;
+        if (choice == "n" || choice == "no") return false;
+        
+        std::cout << "Please enter 'y' for yes or 'n' for no: ";
+        Internal::clearInputBuffer();
+    }
+}
+
 bool askToContinue(const std::string& operation) {
     std::string choice;
     
@@ -373,4 +396,4 @@ void clearInputBuffer() {
 }
 
 } 
-} 
+}

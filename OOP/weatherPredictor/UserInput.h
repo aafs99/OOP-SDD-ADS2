@@ -13,6 +13,7 @@ namespace UserInput {
     void getYearRange(int& startYear, int& endYear);
     TimeFrame getTimeFrame();
     bool askForFiltering();
+    bool askForPredictions();
     bool askToContinue(const std::string& operation);
     
     // Filter-related functions
