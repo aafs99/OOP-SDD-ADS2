@@ -34,23 +34,40 @@ int main() {
         // 2. Compute candlestick data (default to yearly aggregation)
         std::vector<Candlestick> candlesticks = CandlestickCalculator::computeCandlesticks(records, TimeFrame::Yearly);
         std::cout << "Computed " << candlesticks.size() << " candlestick entries.\n";
-
+        
+        // Check if candlesticks are empty
+        if (candlesticks.empty()) {
+            std::cout << "Error: Failed to compute candlestick data from records.\n";
+            return 1;
+        }
+        
         // 3. Plot the candlestick data as text output
         std::cout << "\nCandlestick chart for " << country << " (" << startYear << "-" << endYear << "):\n";
         Plotter::plotCandlesticks(candlesticks, TimeFrame::Yearly, 20);
 
         // 4. Demonstrate filtering
-        if (endYear - startYear >= 10) {  // Only filter if we have enough years
-            int filterStartYear = startYear + (endYear - startYear) / 4;  // Start at 25% point
-            int filterEndYear = startYear + 3 * (endYear - startYear) / 4;  // End at 75% point
+        const int MIN_YEARS_FOR_FILTERING = 10;
+        int yearRange = endYear - startYear + 1;
+        
+        if (yearRange >= MIN_YEARS_FOR_FILTERING) {
+            // Filter to middle 50% of the data (skip first and last 25%)
+            int skipYears = yearRange / 4;
+            int filterStartYear = startYear + skipYears;
+            int filterEndYear = endYear - skipYears;
             
             std::string filterStart = std::to_string(filterStartYear) + "-01-01";
-            std::string filterEnd = std::to_string(filterEndYear) + "-01-01";
+            std::string filterEnd = std::to_string(filterEndYear) + "-12-31";
             
             std::vector<Candlestick> filtered = DataFilter::filterByDateRange(candlesticks, filterStart, filterEnd);
-            std::cout << "\nFiltered candlestick chart for " << country 
-                      << " (" << filterStartYear << " to " << filterEndYear << "):\n";
-            Plotter::plotCandlesticks(filtered, TimeFrame::Yearly, 20);
+            
+            if (!filtered.empty()) {
+                std::cout << "\nFiltered candlestick chart for " << country 
+                          << " (" << filterStartYear << " to " << filterEndYear << "):\n";
+                Plotter::plotCandlesticks(filtered, TimeFrame::Yearly, 15);
+            }
+        } else {
+            std::cout << "\nSkipping filtering demonstration - need at least " 
+                      << MIN_YEARS_FOR_FILTERING << " years of data.\n";
         }
 
         // 5. Predict future temperature trend using different models
