@@ -88,10 +88,66 @@ void UserInput::getYearRange(int& startYear, int& endYear) {
     }
 }
 
+TimeFrame UserInput::getTimeFrame() {
+    int choice;
+    bool validInput = false;
+    
+    std::cout << "\n=== Timeframe Selection ===\n";
+    displayAvailableTimeFrames();
+    
+    while (!validInput) {
+        std::cout << "\nEnter your choice (1-3): ";
+        
+        if (!(std::cin >> choice)) {
+            // Handle non-numeric input
+            std::cout << "Error: Please enter a valid number.\n";
+            clearInputBuffer();
+            continue;
+        }
+        
+        switch (choice) {
+            case 1:
+                return TimeFrame::Yearly;
+            case 2:
+                return TimeFrame::Monthly;
+            case 3:
+                return TimeFrame::Daily;
+            default:
+                std::cout << "Error: Please enter 1, 2, or 3.\n";
+                continue;
+        }
+    }
+    
+    // Should never reach here, but return default as fallback
+    return TimeFrame::Yearly;
+}
+
+std::string UserInput::timeFrameToString(TimeFrame timeframe) {
+    switch (timeframe) {
+        case TimeFrame::Yearly:
+            return "Yearly";
+        case TimeFrame::Monthly:
+            return "Monthly";
+        case TimeFrame::Daily:
+            return "Daily";
+        default:
+            return "Unknown";
+    }
+}
+
+void UserInput::displayAvailableTimeFrames() {
+    std::cout << "Available timeframes:\n";
+    std::cout << "  1. Yearly   - One candlestick per year (recommended for long-term trends)\n";
+    std::cout << "  2. Monthly  - One candlestick per month (good for seasonal patterns)\n";
+    std::cout << "  3. Daily    - One candlestick per day (detailed short-term analysis)\n";
+    std::cout << "\nNote: Daily timeframe will generate many candlesticks and may be\n";
+    std::cout << "compressed for display. Consider using shorter date ranges with daily data.\n";
+}
+
 void UserInput::displayAvailableCountries() {
     std::cout << "Available countries:\n";
     
-    // Display countries in rows of 4 for better readability
+    // Display countries in rows of 2 for better readability
     for (size_t i = 0; i < VALID_COUNTRIES.size(); ++i) {
         std::cout << "  " << VALID_COUNTRIES[i];
         

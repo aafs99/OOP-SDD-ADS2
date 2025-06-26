@@ -3,9 +3,10 @@
 
 #include <string>
 #include <vector>
+#include "CandlestickCalculator.h" // For TimeFrame enum
 
 /**
- * UserInput class to handle user input validation and collection.\
+ * UserInput class to handle user input validation and collection.
  */
 class UserInput {
 private:
@@ -18,9 +19,9 @@ private:
 
 public:
     /**
-     * Validdate country code from user input
+     * Get and validate country code from user input.
      * Displays available countries and validates input.
-     * Returns validated country code in uppercase.
+     * @return Validated country code in uppercase
      */
     static std::string getCountryCode();
     
@@ -34,11 +35,24 @@ public:
     static int getYear(const std::string& prompt, int minYear = MIN_YEAR, int maxYear = MAX_YEAR);
     
     /**
-     * Get a valid year range (start and end years) from user input
+     * Get a valid year range (start and end years) from user input.
      * @param startYear Reference to store the validated start year
      * @param endYear Reference to store the validated end year
      */
     static void getYearRange(int& startYear, int& endYear);
+    
+    /**
+     * Get the desired timeframe for candlestick aggregation from user input.
+     * @return Selected TimeFrame (Yearly, Monthly, or Daily)
+     */
+    static TimeFrame getTimeFrame();
+    
+    /**
+     * Convert TimeFrame enum to human-readable string.
+     * @param timeframe The TimeFrame enum value
+     * @return String representation of the timeframe
+     */
+    static std::string timeFrameToString(TimeFrame timeframe);
     
     /**
      * Display available countries to help user choose.
@@ -46,6 +60,11 @@ public:
     static void displayAvailableCountries();
     
 private:
+    /**
+     * Display available timeframe options to help user choose.
+     */
+    static void displayAvailableTimeFrames();
+    
     /**
      * Convert string to uppercase for case-insensitive comparison.
      */
