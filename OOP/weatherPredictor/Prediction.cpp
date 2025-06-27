@@ -5,24 +5,25 @@
 #include <iostream>
 #include <iomanip>
 #include <numeric>
+#include <sstream>
 
-// Enhanced prediction methods with confidence metrics
+// Enhanced prediction methods with improved error handling and performance
 
 PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candlestick>& data) {
     const std::string modelName = "Linear Regression";
+    std::string errorMessage;
     
-    // Check for sufficient data
-    if (data.size() < 2) {
-        return PredictionResult("Insufficient data (need at least 2 points)", modelName);
+    if (!validateDataSize(data, MIN_LINEAR_DATA_SIZE, errorMessage)) {
+        return PredictionResult(errorMessage, modelName);
     }
     
-    int n = data.size();
+    const auto n = static_cast<double>(data.size());
     double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumX2 = 0.0;
     
-    // Calculate sums for x, y, xy, x²
-    for (int i = 0; i < n; i++) {
-        double x = static_cast<double>(i);  // Time index
-        double y = data[i].getClose();      // Temperature
+    // Calculate sums using range-based for loop with index
+    for (size_t i = 0; i < data.size(); ++i) {
+        const double x = static_cast<double>(i);
+        const double y = data[i].getClose();
         
         sumX += x;
         sumY += y;
@@ -31,121 +32,141 @@ PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candl
     }
     
     // Calculate slope and intercept using least squares method
-    double denominator = n * sumX2 - sumX * sumX;
-    if (std::abs(denominator) < Constants::EPSILON) {
-        // Degenerate case - return mean with low confidence
-        double prediction = sumY / n;
-        return PredictionResult(prediction, 0.0, modelName, 
-                              "R² = 0.0 (no linear trend detected)");
+    const double denominator = n * sumX2 - sumX * sumX;
+    if (std::abs(denominator) < EPSILON) {
+        const double prediction = sumY / n;
+        const std::string confDesc = "R² = 0.0 (no linear trend detected)";
+        return PredictionResult(prediction, 0.0, modelName, confDesc);
     }
     
-    double slope = (n * sumXY - sumX * sumY) / denominator;
-    double intercept = (sumY - slope * sumX) / n;
+    const double slope = (n * sumXY - sumX * sumY) / denominator;
+    const double intercept = (sumY - slope * sumX) / n;
     
     // Calculate prediction for next period
-    double nextX = static_cast<double>(n);
-    double prediction = slope * nextX + intercept;
+    const double nextX = n;
+    const double prediction = slope * nextX + intercept;
     
     // Calculate confidence metric (R²)
-    double rSquared = calculateRSquaredDetailed(data, slope, intercept);
+    const double rSquared = calculateRSquaredDetailed(data, slope, intercept);
     
-    std::string confDesc = "R² = " + std::to_string(rSquared).substr(0, 5) + 
-                          " (coefficient of determination: higher = better fit)";
+    std::ostringstream confDesc;
+    confDesc << "R² = " << std::fixed << std::setprecision(3) << rSquared 
+             << " (coefficient of determination)";
     
-    return PredictionResult(prediction, rSquared, modelName, confDesc);
+    return PredictionResult(prediction, rSquared, modelName, confDesc.str());
 }
 
-PredictionResult Prediction::predictMovingAverageWithConfidence(const std::vector<Candlestick>& data, 
-                                                               int windowSize) {
-    std::string modelName = "Moving Average (" + std::to_string(windowSize) + "-period)";
+PredictionResult Prediction::predictMovingAverageWithConfidence(
+    const std::vector<Candlestick>& data, int windowSize) {
     
-    if (data.empty()) {
-        return PredictionResult("No data available", modelName);
+    std::ostringstream modelNameStream;
+    modelNameStream << "Moving Average (" << windowSize << "-period)";
+    const std::string modelName = modelNameStream.str();
+    std::string errorMessage;
+    
+    if (!validateDataSize(data, 1, errorMessage)) {
+        return PredictionResult(errorMessage, modelName);
     }
     
-    if (windowSize <= 0) windowSize = 3;  // Default window
-    int actualWindowSize = std::min(windowSize, static_cast<int>(data.size()));
-    
-    // Calculate moving average prediction
-    double sum = 0.0;
-    for (int i = data.size() - actualWindowSize; i < static_cast<int>(data.size()); i++) {
-        sum += data[i].getClose();
+    if (!validateWindowSize(windowSize, data.size(), errorMessage)) {
+        return PredictionResult(errorMessage, modelName);
     }
-    double prediction = sum / actualWindowSize;
+    
+    const int actualWindowSize = std::min(windowSize, static_cast<int>(data.size()));
+    const auto startIdx = data.size() - actualWindowSize;
+    
+    // Calculate moving average prediction using more efficient approach
+    const double sum = std::accumulate(
+        data.begin() + startIdx, data.end(), 0.0,
+        [](double acc, const Candlestick& candle) {
+            return acc + candle.getClose();
+        });
+    
+    const double prediction = sum / actualWindowSize;
     
     // Calculate stability confidence metric
-    double stabilityConfidence = calculateStabilityConfidence(data, actualWindowSize);
+    const double stabilityConfidence = calculateStabilityConfidence(data, actualWindowSize);
     
-    std::string confDesc = "Stability = " + std::to_string(stabilityConfidence).substr(0, 5) +
-                          " (based on inverse volatility: higher = more stable)";
+    std::ostringstream confDesc;
+    confDesc << "Stability = " << std::fixed << std::setprecision(3) << stabilityConfidence
+             << " (inverse volatility metric)";
     
-    return PredictionResult(prediction, stabilityConfidence, modelName, confDesc);
+    return PredictionResult(prediction, stabilityConfidence, modelName, confDesc.str());
 }
 
 PredictionResult Prediction::predictHeuristicWithConfidence(const std::vector<Candlestick>& data) {
     const std::string modelName = "Heuristic (Momentum)";
+    std::string errorMessage;
     
-    if (data.empty()) {
-        return PredictionResult("No data available", modelName);
+    if (!validateDataSize(data, 1, errorMessage)) {
+        return PredictionResult(errorMessage, modelName);
     }
     
     if (data.size() == 1) {
-        return PredictionResult(data[0].getClose(), 0.0, modelName,
-                              "Single data point (no momentum to calculate)");
+        const std::string confDesc = "Single data point (no momentum available)";
+        return PredictionResult(data[0].getClose(), 0.0, modelName, confDesc);
     }
     
     // Calculate momentum prediction
-    double last = data.back().getClose();
-    double secondLast = data[data.size() - 2].getClose();
-    double change = last - secondLast;
-    double prediction = last + change;
+    const double last = data.back().getClose();
+    const double secondLast = data[data.size() - 2].getClose();
+    const double change = last - secondLast;
+    const double prediction = last + change;
     
     // Calculate consistency confidence metric
-    double consistencyConfidence = calculateConsistencyConfidence(data);
+    const double consistencyConfidence = calculateConsistencyConfidence(data);
     
-    std::string confDesc = "Consistency = " + std::to_string(consistencyConfidence).substr(0, 5) +
-                          " (trend consistency: higher = more reliable momentum)";
+    std::ostringstream confDesc;
+    confDesc << "Consistency = " << std::fixed << std::setprecision(3) << consistencyConfidence
+             << " (trend reliability metric)";
     
-    return PredictionResult(prediction, consistencyConfidence, modelName, confDesc);
+    return PredictionResult(prediction, consistencyConfidence, modelName, confDesc.str());
 }
 
-// Cross-validation implementation
+// Cross-validation implementation with improved error handling
 
-ValidationResult Prediction::validateModel(const std::vector<Candlestick>& data,
-                                          PredictionFunction modelFunction,
-                                          int minTrainingSize) {
+ValidationResult Prediction::validateModel(
+    const std::vector<Candlestick>& data,
+    const PredictionFunction& modelFunction,
+    int minTrainingSize) {
+    
     ValidationResult result;
     
-    // Check for sufficient data
     if (static_cast<int>(data.size()) < minTrainingSize + 1) {
-        result.errorMessage = "Insufficient data for validation (need at least " + 
-                             std::to_string(minTrainingSize + 1) + " points)";
+        std::ostringstream errorStream;
+        errorStream << "Insufficient data for validation (need at least " 
+                   << (minTrainingSize + 1) << " points)";
+        result.errorMessage = errorStream.str();
         return result;
     }
     
-    std::vector<double> errors;
-    std::vector<double> squaredErrors;
+    std::vector<double> errors, squaredErrors;
+    errors.reserve(data.size() - minTrainingSize);
+    squaredErrors.reserve(data.size() - minTrainingSize);
     
     // Perform leave-one-out cross-validation
-    for (size_t testIndex = minTrainingSize; testIndex < data.size(); testIndex++) {
-        // Create training data from all previous points
-        std::vector<Candlestick> trainingData(data.begin(), data.begin() + testIndex);
+    for (size_t testIndex = minTrainingSize; testIndex < data.size(); ++testIndex) {
+        // Create training data efficiently
+        const std::vector<Candlestick> trainingData(data.begin(), data.begin() + testIndex);
         
-        // Generate prediction using model function
-        PredictionResult predResult = modelFunction(trainingData);
-        
-        if (predResult.isValid) {
-            // Compare with actual value
-            double actualValue = data[testIndex].getClose();
-            double error = std::abs(predResult.predictionValue - actualValue);
-            double squaredError = (predResult.predictionValue - actualValue) * 
-                                 (predResult.predictionValue - actualValue);
+        try {
+            const PredictionResult predResult = modelFunction(trainingData);
             
-            errors.push_back(error);
-            squaredErrors.push_back(squaredError);
-            result.validPredictions++;
+            if (predResult.isValid) {
+                const double actualValue = data[testIndex].getClose();
+                const double error = std::abs(predResult.predictionValue - actualValue);
+                const double squaredError = std::pow(predResult.predictionValue - actualValue, 2);
+                
+                errors.push_back(error);
+                squaredErrors.push_back(squaredError);
+                ++result.validPredictions;
+            }
+        } catch (const std::exception& e) {
+            // Handle any exceptions from prediction function
+            // Continue with next iteration
         }
-        result.totalAttempts++;
+        
+        ++result.totalAttempts;
     }
     
     if (errors.empty()) {
@@ -153,7 +174,7 @@ ValidationResult Prediction::validateModel(const std::vector<Candlestick>& data,
         return result;
     }
     
-    // Calculate statistical metrics
+    // Calculate statistical metrics efficiently
     result.meanAbsoluteError = calculateMean(errors);
     result.meanSquaredError = calculateMean(squaredErrors);
     result.maxError = *std::max_element(errors.begin(), errors.end());
@@ -165,89 +186,239 @@ ValidationResult Prediction::validateModel(const std::vector<Candlestick>& data,
 
 std::vector<ValidationResult> Prediction::validateAllModels(const std::vector<Candlestick>& data) {
     std::vector<ValidationResult> results;
+    results.reserve(3);
     
-    // Validate Linear Regression
-    auto linearFunction = [](const std::vector<Candlestick>& d) -> PredictionResult {
-        return predictLinearWithConfidence(d);
+    // Define prediction functions using lambdas
+    const std::vector<std::pair<PredictionFunction, int>> models = {
+        {[](const std::vector<Candlestick>& d) { return predictLinearWithConfidence(d); }, 2},
+        {[](const std::vector<Candlestick>& d) { return predictMovingAverageWithConfidence(d, 3); }, 1},
+        {[](const std::vector<Candlestick>& d) { return predictHeuristicWithConfidence(d); }, 2}
     };
-    ValidationResult linearResult = validateModel(data, linearFunction, 2);
-    results.push_back(linearResult);
     
-    // Validate Moving Average (3-period)
-    auto movingAvgFunction = [](const std::vector<Candlestick>& d) -> PredictionResult {
-        return predictMovingAverageWithConfidence(d, 3);
-    };
-    ValidationResult movingAvgResult = validateModel(data, movingAvgFunction, 1);
-    results.push_back(movingAvgResult);
-    
-    // Validate Heuristic Model
-    auto heuristicFunction = [](const std::vector<Candlestick>& d) -> PredictionResult {
-        return predictHeuristicWithConfidence(d);
-    };
-    ValidationResult heuristicResult = validateModel(data, heuristicFunction, 2);
-    results.push_back(heuristicResult);
+    for (const auto& [modelFunc, minSize] : models) {
+        results.push_back(validateModel(data, modelFunc, minSize));
+    }
     
     return results;
 }
 
-// Rolling predictions for chart comparison
+// Rolling predictions with improved efficiency
 
 std::vector<PredictionResult> Prediction::generateRollingPredictions(
     const std::vector<Candlestick>& data,
-    PredictionFunction modelFunction,
+    const PredictionFunction& modelFunction,
     int startIndex) {
     
     std::vector<PredictionResult> predictions;
+    predictions.reserve(data.size() - startIndex);
     
-    // Generate predictions for each period using only previous data
-    for (size_t i = startIndex; i < data.size(); i++) {
-        // Create training data from all previous points
-        std::vector<Candlestick> trainingData(data.begin(), data.begin() + i);
-        
-        // Generate prediction for period i
-        PredictionResult prediction = modelFunction(trainingData);
-        predictions.push_back(prediction);
+    for (size_t i = startIndex; i < data.size(); ++i) {
+        const std::vector<Candlestick> trainingData(data.begin(), data.begin() + i);
+        predictions.push_back(modelFunction(trainingData));
     }
     
     return predictions;
 }
 
-void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>& data,
-                                                TimeFrame timeframe,
-                                                const std::string& country,
-                                                int startYear, int endYear) {
+// Enhanced display methods with better formatting
+
+void Prediction::displayEnhancedPredictionResults(
+    const std::vector<Candlestick>& data,
+    TimeFrame timeframe,
+    std::string_view country,
+    int startYear, int endYear,
+    const PredictionConfig& config) {
+    
+    if (data.empty()) {
+        std::cout << "Cannot generate predictions: No data available.\n";
+        return;
+    }
+
+    const std::string nextPeriod = determineNextPeriod(data, timeframe, endYear);
+    
+    // Display header with enhanced formatting
+    std::cout << "\n" << std::string(70, '=') << "\n";
+    std::cout << "ENHANCED TEMPERATURE PREDICTION ANALYSIS\n";
+    std::cout << std::string(70, '=') << "\n";
+    std::cout << "Country: " << country << "\n";
+    std::cout << "Data Range: " << startYear << "-" << endYear 
+              << " (" << Utils::timeFrameToString(timeframe) << " data)\n";
+    std::cout << "Data Points: " << data.size() << " periods\n";
+    std::cout << "Predicting: " << nextPeriod << "\n\n";
+
+    // Generate predictions using improved methods
+    const auto results = std::vector<PredictionResult>{
+        predictLinearWithConfidence(data),
+        predictMovingAverageWithConfidence(data, config.movingAverageWindow),
+        predictHeuristicWithConfidence(data)
+    };
+
+    displayPredictionSummary(results, nextPeriod);
+
+    if (config.showValidation && data.size() >= 4) {
+        std::cout << "\n" << std::string(50, '-') << "\n";
+        std::cout << "CROSS-VALIDATION ANALYSIS\n";
+        std::cout << std::string(50, '-') << "\n";
+        const auto validationResults = validateAllModels(data);
+        displayValidationResults(validationResults);
+    }
+
+    if (config.showChart && data.size() >= 4) {
+        displayPredictionComparisonChart(data, timeframe, country, startYear, endYear, config);
+    }
+    
+    std::cout << "\n";
+}
+
+void Prediction::displayPredictionSummary(
+    const std::vector<PredictionResult>& results,
+    const std::string& nextPeriod) {
+    
+    std::cout << "PREDICTION METHODS WITH CONFIDENCE METRICS\n\n";
+
+    const std::vector<std::string> descriptions = {
+        "Least squares trend line fitting - identifies long-term temperature trends",
+        "Average of recent temperature values - smooths short-term fluctuations", 
+        "Projects recent temperature change forward - assumes momentum continues"
+    };
+
+    for (size_t i = 0; i < results.size() && i < descriptions.size(); ++i) {
+        const auto& result = results[i];
+        
+        std::cout << (i + 1) << ". " << result.modelName << "\n";
+        std::cout << "   Method: " << descriptions[i] << "\n";
+        
+        if (result.isValid) {
+            std::cout << "   Result: " << formatTemperature(result.predictionValue) << "°C\n";
+            std::cout << "   Confidence: " << result.confidenceDescription << "\n";
+            std::cout << "   Assessment: " << getConfidenceLevel(result.confidenceMetric) << " confidence\n\n";
+        } else {
+            std::cout << "   Error: " << result.errorMessage << "\n\n";
+        }
+    }
+
+    // Enhanced summary table
+    displayPredictionTable(results, nextPeriod);
+    displayRecommendation(results);
+}
+
+void Prediction::displayPredictionTable(
+    const std::vector<PredictionResult>& results,
+    const std::string& nextPeriod) {
+    
+    std::cout << "PREDICTION SUMMARY FOR " << nextPeriod << "\n";
+    std::cout << std::string(80, '-') << "\n";
+    std::cout << std::left << std::setw(25) << "Method" 
+              << std::setw(12) << "Prediction" 
+              << std::setw(15) << "Confidence"
+              << std::setw(20) << "Reliability" << "\n";
+    std::cout << std::string(80, '-') << "\n";
+    
+    for (const auto& result : results) {
+        if (result.isValid) {
+            std::cout << std::left << std::setw(25) << result.modelName
+                      << std::setw(12) << (formatTemperature(result.predictionValue) + "°C")
+                      << std::setw(15) << formatConfidence(result.confidenceMetric)
+                      << std::setw(20) << getConfidenceLevel(result.confidenceMetric) << "\n";
+        } else {
+            std::cout << std::left << std::setw(25) << result.modelName 
+                      << std::setw(50) << ("Error: " + result.errorMessage) << "\n";
+        }
+    }
+    std::cout << "\n";
+}
+
+void Prediction::displayRecommendation(const std::vector<PredictionResult>& results) {
+    const auto bestResult = std::max_element(results.begin(), results.end(),
+        [](const PredictionResult& a, const PredictionResult& b) {
+            if (!a.isValid) return true;
+            if (!b.isValid) return false;
+            return a.confidenceMetric < b.confidenceMetric;
+        });
+
+    std::cout << "CONFIDENCE-BASED RECOMMENDATION\n";
+    std::cout << std::string(40, '-') << "\n";
+    
+    if (bestResult != results.end() && bestResult->isValid && bestResult->confidenceMetric > 0.0) {
+        std::cout << "🎯 RECOMMENDED: " << bestResult->modelName << "\n";
+        std::cout << "   Confidence: " << formatConfidence(bestResult->confidenceMetric) << "\n";
+        std::cout << "   Reason: Highest confidence metric among available models\n";
+    } else {
+        std::cout << "⚠ No reliable model available - consider gathering more data\n";
+    }
+    std::cout << "\n";
+}
+
+void Prediction::displayPredictionComparisonChart(
+    const std::vector<Candlestick>& data,
+    TimeFrame timeframe,
+    std::string_view country,
+    int startYear, int endYear,
+    const PredictionConfig& config) {
+    
     if (data.size() < 4) {
         std::cout << "Insufficient data for prediction comparison chart (need at least 4 periods).\n";
         return;
     }
 
-    std::cout << "\n=== PREDICTION COMPARISON CHART ===\n";
-    std::cout << "Generating rolling predictions for visual comparison...\n\n";
+    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << "PREDICTION COMPARISON CHART\n";
+    std::cout << std::string(60, '=') << "\n";
+    std::cout << "Visual comparison for " << country << " (" << startYear << "-" << endYear << ")\n\n";
 
-    // Generate rolling predictions for each model
-    auto linearFunction = [](const std::vector<Candlestick>& d) -> PredictionResult {
-        return predictLinearWithConfidence(d);
+    // Generate all rolling predictions
+    const auto allPredictions = generateAllRollingPredictions(data);
+    
+    // Display chart
+    displayChartHeader();
+    displayChartData(data, allPredictions, timeframe, startYear, config);
+    displayChartFooter(data, config);
+    displayChartLegend();
+    displayAccuracyAnalysis(data, allPredictions);
+}
+
+std::vector<std::vector<PredictionResult>> Prediction::generateAllRollingPredictions(
+    const std::vector<Candlestick>& data) {
+    
+    const std::vector<std::pair<PredictionFunction, int>> models = {
+        {[](const auto& d) { return predictLinearWithConfidence(d); }, 2},
+        {[](const auto& d) { return predictMovingAverageWithConfidence(d, 3); }, 1},
+        {[](const auto& d) { return predictHeuristicWithConfidence(d); }, 2}
     };
-    auto movingAvgFunction = [](const std::vector<Candlestick>& d) -> PredictionResult {
-        return predictMovingAverageWithConfidence(d, 3);
-    };
-    auto heuristicFunction = [](const std::vector<Candlestick>& d) -> PredictionResult {
-        return predictHeuristicWithConfidence(d);
-    };
+    
+    std::vector<std::vector<PredictionResult>> allPredictions;
+    allPredictions.reserve(models.size());
+    
+    for (const auto& [modelFunc, startIdx] : models) {
+        allPredictions.push_back(generateRollingPredictions(data, modelFunc, startIdx));
+    }
+    
+    return allPredictions;
+}
 
-    std::vector<PredictionResult> linearPredictions = generateRollingPredictions(data, linearFunction, 2);
-    std::vector<PredictionResult> movingAvgPredictions = generateRollingPredictions(data, movingAvgFunction, 1);
-    std::vector<PredictionResult> heuristicPredictions = generateRollingPredictions(data, heuristicFunction, 2);
-
-    // Create the comparison chart
-    std::cout << "Figure 4: Temperature Predictions vs Actual Values (" << country << ", " 
-              << startYear << "-" << endYear << ")\n\n";
-
-    // Chart header
+void Prediction::displayChartHeader() {
     std::cout << "Period    Actual   Linear   MovAvg   Heuris  |  Visual Comparison\n";
     std::cout << "          (°C)     (°C)     (°C)     (°C)    |  o=Actual ^=Linear #=MovAvg +=Heuristic\n";
     std::cout << std::string(78, '-') << "\n";
+}
 
+void Prediction::displayChartLegend() {
+    std::cout << "\nLEGEND:\n";
+    std::cout << "  o = Actual Temperature\n";
+    std::cout << "  ^ = Linear Regression Prediction\n";
+    std::cout << "  # = Moving Average Prediction\n";
+    std::cout << "  + = Heuristic Model Prediction\n";
+    std::cout << "  * = Multiple predictions at same position\n\n";
+}
+
+// Add other missing method implementations
+void Prediction::displayChartData(
+    const std::vector<Candlestick>& data,
+    const std::vector<std::vector<PredictionResult>>& allPredictions,
+    TimeFrame timeframe,
+    int startYear,
+    const PredictionConfig& config) {
+    
     // Determine the range for scaling
     double minTemp = data[0].getClose();
     double maxTemp = data[0].getClose();
@@ -259,7 +430,7 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
     
     // Add some padding
     double range = maxTemp - minTemp;
-    double padding = range * Constants::CHART_PADDING_RATIO;
+    double padding = range * PredictionConfig::CHART_PADDING_RATIO;
     minTemp -= padding;
     maxTemp += padding;
 
@@ -274,7 +445,9 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
         } else if (timeframe == TimeFrame::Monthly) {
             int year = startYear + (i / 12);
             int month = (i % 12) + 1;
-            periodLabel = std::to_string(year) + "-" + (month < 10 ? "0" : "") + std::to_string(month);
+            std::ostringstream oss;
+            oss << year << "-" << std::setfill('0') << std::setw(2) << month;
+            periodLabel = oss.str();
         } else {
             periodLabel = "Period " + std::to_string(i + 1);
         }
@@ -295,25 +468,25 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
         std::string movingStr = "   -  ";
         std::string heuristicStr = "   -  ";
 
-        if (i >= 2 && (i - 2) < linearPredictions.size() && linearPredictions[i - 2].isValid) {
-            linearStr = std::to_string(linearPredictions[i - 2].predictionValue).substr(0, 5);
+        if (allPredictions.size() > 0 && i >= 2 && (i - 2) < allPredictions[0].size() && allPredictions[0][i - 2].isValid) {
+            linearStr = formatTemperature(allPredictions[0][i - 2].predictionValue, 1);
             while (linearStr.length() < 6) linearStr += " ";
         }
         
-        if (i >= 1 && (i - 1) < movingAvgPredictions.size() && movingAvgPredictions[i - 1].isValid) {
-            movingStr = std::to_string(movingAvgPredictions[i - 1].predictionValue).substr(0, 5);
+        if (allPredictions.size() > 1 && i >= 1 && (i - 1) < allPredictions[1].size() && allPredictions[1][i - 1].isValid) {
+            movingStr = formatTemperature(allPredictions[1][i - 1].predictionValue, 1);
             while (movingStr.length() < 6) movingStr += " ";
         }
         
-        if (i >= 2 && (i - 2) < heuristicPredictions.size() && heuristicPredictions[i - 2].isValid) {
-            heuristicStr = std::to_string(heuristicPredictions[i - 2].predictionValue).substr(0, 5);
+        if (allPredictions.size() > 2 && i >= 2 && (i - 2) < allPredictions[2].size() && allPredictions[2][i - 2].isValid) {
+            heuristicStr = formatTemperature(allPredictions[2][i - 2].predictionValue, 1);
             while (heuristicStr.length() < 6) heuristicStr += " ";
         }
 
         std::cout << "  " << linearStr << "  " << movingStr << "  " << heuristicStr << "  |  ";
 
-        // Create visual representation with BOUNDS CHECKING
-        const int chartWidth = Constants::CHART_WIDTH;
+        // Create visual representation
+        const int chartWidth = config.chartWidth;
         std::vector<char> chartLine(chartWidth, ' ');
         
         // Calculate positions for each value with bounds checking
@@ -321,41 +494,40 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
             if (maxTemp <= minTemp) return chartWidth / 2;
             double normalized = (value - minTemp) / (maxTemp - minTemp);
             int pos = static_cast<int>(normalized * (chartWidth - 1));
-            // CRITICAL FIX: Ensure bounds checking
             return std::max(0, std::min(pos, chartWidth - 1));
         };
 
         int actualPos = getPosition(actualTemp);
         if (actualPos >= 0 && actualPos < chartWidth) {
-            chartLine[actualPos] = 'o';  // Actual temperature
+            chartLine[actualPos] = 'o';
         }
 
         // Add predictions with bounds checking
-        if (i >= 2 && (i - 2) < linearPredictions.size() && linearPredictions[i - 2].isValid) {
-            int linearPos = getPosition(linearPredictions[i - 2].predictionValue);
+        if (allPredictions.size() > 0 && i >= 2 && (i - 2) < allPredictions[0].size() && allPredictions[0][i - 2].isValid) {
+            int linearPos = getPosition(allPredictions[0][i - 2].predictionValue);
             if (linearPos >= 0 && linearPos < chartWidth && linearPos != actualPos) {
-                chartLine[linearPos] = '^';  // Linear prediction
+                chartLine[linearPos] = '^';
             }
         }
         
-        if (i >= 1 && (i - 1) < movingAvgPredictions.size() && movingAvgPredictions[i - 1].isValid) {
-            int movingPos = getPosition(movingAvgPredictions[i - 1].predictionValue);
+        if (allPredictions.size() > 1 && i >= 1 && (i - 1) < allPredictions[1].size() && allPredictions[1][i - 1].isValid) {
+            int movingPos = getPosition(allPredictions[1][i - 1].predictionValue);
             if (movingPos >= 0 && movingPos < chartWidth && movingPos != actualPos) {
                 if (chartLine[movingPos] == ' ') {
-                    chartLine[movingPos] = '#';  // Moving average prediction
+                    chartLine[movingPos] = '#';
                 } else {
-                    chartLine[movingPos] = '*';  // Multiple predictions at same position
+                    chartLine[movingPos] = '*';
                 }
             }
         }
         
-        if (i >= 2 && (i - 2) < heuristicPredictions.size() && heuristicPredictions[i - 2].isValid) {
-            int heuristicPos = getPosition(heuristicPredictions[i - 2].predictionValue);
+        if (allPredictions.size() > 2 && i >= 2 && (i - 2) < allPredictions[2].size() && allPredictions[2][i - 2].isValid) {
+            int heuristicPos = getPosition(allPredictions[2][i - 2].predictionValue);
             if (heuristicPos >= 0 && heuristicPos < chartWidth && heuristicPos != actualPos) {
                 if (chartLine[heuristicPos] == ' ') {
-                    chartLine[heuristicPos] = '+';  // Heuristic prediction
+                    chartLine[heuristicPos] = '+';
                 } else {
-                    chartLine[heuristicPos] = '*';  // Multiple predictions at same position
+                    chartLine[heuristicPos] = '*';
                 }
             }
         }
@@ -367,51 +539,70 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
         
         std::cout << "\n";
     }
+}
 
-    // Chart footer with temperature scale
+void Prediction::displayChartFooter(
+    const std::vector<Candlestick>& data,
+    const PredictionConfig& config) {
+    
+    // Determine the range for scaling
+    double minTemp = data[0].getClose();
+    double maxTemp = data[0].getClose();
+    
+    for (const auto& candle : data) {
+        minTemp = std::min(minTemp, candle.getClose());
+        maxTemp = std::max(maxTemp, candle.getClose());
+    }
+    
+    double range = maxTemp - minTemp;
+    double padding = range * PredictionConfig::CHART_PADDING_RATIO;
+    
     std::cout << std::string(78, '-') << "\n";
     std::cout << "Temperature Scale: ";
-    std::cout << std::fixed << std::setprecision(1) << minTemp + padding << "°C";
+    std::cout << std::fixed << std::setprecision(1) << (minTemp + padding) << "°C";
     for (int i = 0; i < 35; i++) std::cout << " ";
-    std::cout << maxTemp - padding << "°C\n\n";
+    std::cout << (maxTemp - padding) << "°C\n\n";
+}
 
-    // Updated legend (no color claims)
-    std::cout << "LEGEND:\n";
-    std::cout << "  o = Actual Temperature\n";
-    std::cout << "  ^ = Linear Regression Prediction\n";
-    std::cout << "  # = Moving Average Prediction\n";
-    std::cout << "  + = Heuristic Model Prediction\n";
-    std::cout << "  * = Multiple predictions at same position\n\n";
-
-    // Calculate and display prediction accuracy statistics
+void Prediction::displayAccuracyAnalysis(
+    const std::vector<Candlestick>& data,
+    const std::vector<std::vector<PredictionResult>>& allPredictions) {
+    
     std::cout << "=== PREDICTION ACCURACY ANALYSIS ===\n";
     
     // Calculate errors for each model
-    std::vector<double> linearErrors, movingAvgErrors, heuristicErrors;
+    std::vector<std::vector<double>> allErrors(3);
     
-    for (size_t i = 2; i < data.size(); i++) {
-        double actualTemp = data[i].getClose();
-        
-        // Linear model errors
-        if ((i - 2) < linearPredictions.size() && linearPredictions[i - 2].isValid) {
-            double error = std::abs(actualTemp - linearPredictions[i - 2].predictionValue);
-            linearErrors.push_back(error);
-        }
-        
-        // Heuristic model errors
-        if ((i - 2) < heuristicPredictions.size() && heuristicPredictions[i - 2].isValid) {
-            double error = std::abs(actualTemp - heuristicPredictions[i - 2].predictionValue);
-            heuristicErrors.push_back(error);
+    // Linear model errors (index 0)
+    if (allPredictions.size() > 0) {
+        for (size_t i = 2; i < data.size(); i++) {
+            if ((i - 2) < allPredictions[0].size() && allPredictions[0][i - 2].isValid) {
+                double actualTemp = data[i].getClose();
+                double error = std::abs(actualTemp - allPredictions[0][i - 2].predictionValue);
+                allErrors[0].push_back(error);
+            }
         }
     }
     
-    for (size_t i = 1; i < data.size(); i++) {
-        double actualTemp = data[i].getClose();
-        
-        // Moving average errors
-        if ((i - 1) < movingAvgPredictions.size() && movingAvgPredictions[i - 1].isValid) {
-            double error = std::abs(actualTemp - movingAvgPredictions[i - 1].predictionValue);
-            movingAvgErrors.push_back(error);
+    // Moving average errors (index 1)
+    if (allPredictions.size() > 1) {
+        for (size_t i = 1; i < data.size(); i++) {
+            if ((i - 1) < allPredictions[1].size() && allPredictions[1][i - 1].isValid) {
+                double actualTemp = data[i].getClose();
+                double error = std::abs(actualTemp - allPredictions[1][i - 1].predictionValue);
+                allErrors[1].push_back(error);
+            }
+        }
+    }
+    
+    // Heuristic model errors (index 2)
+    if (allPredictions.size() > 2) {
+        for (size_t i = 2; i < data.size(); i++) {
+            if ((i - 2) < allPredictions[2].size() && allPredictions[2][i - 2].isValid) {
+                double actualTemp = data[i].getClose();
+                double error = std::abs(actualTemp - allPredictions[2][i - 2].predictionValue);
+                allErrors[2].push_back(error);
+            }
         }
     }
 
@@ -423,31 +614,17 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
               << std::setw(15) << "Predictions" << "\n";
     std::cout << std::string(65, '-') << "\n";
     
-    if (!linearErrors.empty()) {
-        double avgError = calculateMean(linearErrors);
-        double maxError = *std::max_element(linearErrors.begin(), linearErrors.end());
-        std::cout << std::left << std::setw(20) << "Linear Regression"
-                  << std::setw(15) << (std::to_string(avgError).substr(0, 5))
-                  << std::setw(15) << (std::to_string(maxError).substr(0, 5))
-                  << std::setw(15) << linearErrors.size() << "\n";
-    }
+    const std::vector<std::string> modelNames = {"Linear Regression", "Moving Average", "Heuristic Model"};
     
-    if (!movingAvgErrors.empty()) {
-        double avgError = calculateMean(movingAvgErrors);
-        double maxError = *std::max_element(movingAvgErrors.begin(), movingAvgErrors.end());
-        std::cout << std::left << std::setw(20) << "Moving Average"
-                  << std::setw(15) << (std::to_string(avgError).substr(0, 5))
-                  << std::setw(15) << (std::to_string(maxError).substr(0, 5))
-                  << std::setw(15) << movingAvgErrors.size() << "\n";
-    }
-    
-    if (!heuristicErrors.empty()) {
-        double avgError = calculateMean(heuristicErrors);
-        double maxError = *std::max_element(heuristicErrors.begin(), heuristicErrors.end());
-        std::cout << std::left << std::setw(20) << "Heuristic Model"
-                  << std::setw(15) << (std::to_string(avgError).substr(0, 5))
-                  << std::setw(15) << (std::to_string(maxError).substr(0, 5))
-                  << std::setw(15) << heuristicErrors.size() << "\n";
+    for (size_t i = 0; i < allErrors.size() && i < modelNames.size(); i++) {
+        if (!allErrors[i].empty()) {
+            double avgError = calculateMean(allErrors[i]);
+            double maxError = *std::max_element(allErrors[i].begin(), allErrors[i].end());
+            std::cout << std::left << std::setw(20) << modelNames[i]
+                      << std::setw(15) << formatDouble(avgError, 2)
+                      << std::setw(15) << formatDouble(maxError, 2)
+                      << std::setw(15) << allErrors[i].size() << "\n";
+        }
     }
 
     std::cout << "\nNote: This chart shows rolling predictions where each prediction uses only\n";
@@ -455,188 +632,121 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
     std::cout << "Lower average error indicates better historical prediction accuracy.\n\n";
 }
 
-// Enhanced display methods
+// Utility and helper methods with improved efficiency
 
-void Prediction::displayEnhancedPredictionResults(const std::vector<Candlestick>& data,
-                                                 TimeFrame timeframe,
-                                                 const std::string& country,
-                                                 int startYear, int endYear,
-                                                 bool showValidation) {
-    if (data.empty()) {
-        std::cout << "Cannot generate predictions: No data available.\n";
-        return;
-    }
-
-    std::string nextPeriod = determineNextPeriod(data, timeframe, endYear);
+double Prediction::calculateRSquaredDetailed(
+    const std::vector<Candlestick>& data, 
+    double slope, double intercept) noexcept {
     
-    std::cout << "\n=== ENHANCED TASK 4: Temperature Prediction with Confidence Metrics ===\n";
-    std::cout << "Country: " << country << "\n";
-    std::cout << "Data Range: " << startYear << "-" << endYear << " (" 
-              << Utils::timeFrameToString(timeframe) << " data)\n";
-    std::cout << "Data Points: " << data.size() << " periods\n";
-    std::cout << "Predicting: " << nextPeriod << "\n\n";
-
-    // Generate enhanced predictions
-    PredictionResult linearResult = predictLinearWithConfidence(data);
-    PredictionResult movingAvgResult = predictMovingAverageWithConfidence(data, 3);
-    PredictionResult heuristicResult = predictHeuristicWithConfidence(data);
-
-    std::cout << "=== Enhanced Prediction Methods with Confidence Metrics ===\n\n";
-
-    // Display Linear Regression
-    std::cout << "1. LINEAR REGRESSION MODEL\n";
-    std::cout << "   Method: Least squares trend line fitting\n";
-    std::cout << "   Calculation: y = mx + b, where m = slope, b = intercept\n";
-    std::cout << "   Justification: Identifies long-term temperature trends from historical data\n";
-    if (linearResult.isValid) {
-        std::cout << "   Result: " << std::fixed << std::setprecision(2) 
-                  << linearResult.predictionValue << "°C\n";
-        std::cout << "   Confidence: " << linearResult.confidenceDescription << "\n";
-        if (linearResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD) {
-            std::cout << "   Assessment: ✓ HIGH confidence - Strong linear trend detected\n\n";
-        } else if (linearResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD) {
-            std::cout << "   Assessment: ⚠ MODERATE confidence - Weak linear trend\n\n";
-        } else {
-            std::cout << "   Assessment: ⚠ LOW confidence - No clear linear trend\n\n";
-        }
-    } else {
-        std::cout << "   Error: " << linearResult.errorMessage << "\n\n";
-    }
-
-    // Display Moving Average
-    std::cout << "2. MOVING AVERAGE MODEL (3-period)\n";
-    std::cout << "   Method: Average of recent temperature values\n";
-    std::cout << "   Calculation: (T₁ + T₂ + T₃) / 3\n";
-    std::cout << "   Justification: Smooths short-term fluctuations, provides stable forecast\n";
-    if (movingAvgResult.isValid) {
-        std::cout << "   Result: " << std::fixed << std::setprecision(2) 
-                  << movingAvgResult.predictionValue << "°C\n";
-        std::cout << "   Confidence: " << movingAvgResult.confidenceDescription << "\n";
-        if (movingAvgResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD) {
-            std::cout << "   Assessment: ✓ HIGH stability - Low recent volatility\n\n";
-        } else if (movingAvgResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD) {
-            std::cout << "   Assessment: ⚠ MODERATE stability - Some volatility present\n\n";
-        } else {
-            std::cout << "   Assessment: ⚠ LOW stability - High recent volatility\n\n";
-        }
-    } else {
-        std::cout << "   Error: " << movingAvgResult.errorMessage << "\n\n";
-    }
-
-    // Display Heuristic Model
-    std::cout << "3. HEURISTIC (MOMENTUM) MODEL\n";
-    std::cout << "   Method: Projects recent temperature change forward\n";
-    std::cout << "   Calculation: Next = Current + (Current - Previous)\n";
-    std::cout << "   Justification: Assumes recent momentum will continue\n";
-    if (heuristicResult.isValid) {
-        std::cout << "   Result: " << std::fixed << std::setprecision(2) 
-                  << heuristicResult.predictionValue << "°C\n";
-        std::cout << "   Confidence: " << heuristicResult.confidenceDescription << "\n";
-        if (heuristicResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD) {
-            std::cout << "   Assessment: ✓ HIGH consistency - Reliable momentum trend\n\n";
-        } else if (heuristicResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD) {
-            std::cout << "   Assessment: ⚠ MODERATE consistency - Some trend variability\n\n";
-        } else {
-            std::cout << "   Assessment: ⚠ LOW consistency - Highly variable trends\n\n";
-        }
-    } else {
-        std::cout << "   Error: " << heuristicResult.errorMessage << "\n\n";
-    }
-
-    // Enhanced summary with confidence-based recommendations
-    std::cout << "=== Enhanced Prediction Summary for " << nextPeriod << " ===\n";
-    std::cout << std::left << std::setw(25) << "Method" 
-              << std::setw(12) << "Prediction" 
-              << std::setw(15) << "Confidence"
-              << std::setw(20) << "Reliability" << "\n";
-    std::cout << std::string(72, '-') << "\n";
+    if (data.size() < 2) return 0.0;
     
-    if (linearResult.isValid) {
-        std::string reliability = linearResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD ? "High" :
-                                linearResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD ? "Moderate" : "Low";
-        std::cout << std::left << std::setw(25) << "Linear Regression" 
-                  << std::setw(12) << (std::to_string(linearResult.predictionValue).substr(0,5) + "°C")
-                  << std::setw(15) << (std::to_string(linearResult.confidenceMetric).substr(0,5))
-                  << std::setw(20) << reliability << "\n";
-    }
+    // Calculate mean efficiently
+    const double sumY = std::accumulate(data.begin(), data.end(), 0.0,
+        [](double acc, const Candlestick& candle) {
+            return acc + candle.getClose();
+        });
+    const double meanY = sumY / data.size();
     
-    if (movingAvgResult.isValid) {
-        std::string reliability = movingAvgResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD ? "High" :
-                                movingAvgResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD ? "Moderate" : "Low";
-        std::cout << std::left << std::setw(25) << "Moving Average (3)" 
-                  << std::setw(12) << (std::to_string(movingAvgResult.predictionValue).substr(0,5) + "°C")
-                  << std::setw(15) << (std::to_string(movingAvgResult.confidenceMetric).substr(0,5))
-                  << std::setw(20) << reliability << "\n";
-    }
+    double totalSumSquares = 0.0;
+    double residualSumSquares = 0.0;
     
-    if (heuristicResult.isValid) {
-        std::string reliability = heuristicResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD ? "High" :
-                                heuristicResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD ? "Moderate" : "Low";
-        std::cout << std::left << std::setw(25) << "Heuristic (Momentum)" 
-                  << std::setw(12) << (std::to_string(heuristicResult.predictionValue).substr(0,5) + "°C")
-                  << std::setw(15) << (std::to_string(heuristicResult.confidenceMetric).substr(0,5))
-                  << std::setw(20) << reliability << "\n";
-    }
-
-    // Confidence-based recommendation
-    std::cout << "\n=== Confidence-Based Recommendation ===\n";
-    double bestConfidence = 0.0;
-    std::string bestModel = "None";
-    
-    if (linearResult.isValid && linearResult.confidenceMetric > bestConfidence) {
-        bestConfidence = linearResult.confidenceMetric;
-        bestModel = "Linear Regression (R² = " + std::to_string(linearResult.confidenceMetric).substr(0,4) + ")";
-    }
-    if (movingAvgResult.isValid && movingAvgResult.confidenceMetric > bestConfidence) {
-        bestConfidence = movingAvgResult.confidenceMetric;
-        bestModel = "Moving Average (Stability = " + std::to_string(movingAvgResult.confidenceMetric).substr(0,4) + ")";
-    }
-    if (heuristicResult.isValid && heuristicResult.confidenceMetric > bestConfidence) {
-        bestConfidence = heuristicResult.confidenceMetric;
-        bestModel = "Heuristic Model (Consistency = " + std::to_string(heuristicResult.confidenceMetric).substr(0,4) + ")";
-    }
-    
-    if (bestConfidence > 0.0) {
-        std::cout << "🎯 RECOMMENDED: " << bestModel << "\n";
-        std::cout << "   Reason: Highest confidence metric among available models\n";
-    } else {
-        std::cout << "⚠ No reliable model available - consider gathering more data\n";
-    }
-
-    // Cross-validation analysis if requested
-    if (showValidation && data.size() >= 4) {
-        std::cout << "\n=== Cross-Validation Analysis ===\n";
-        std::cout << "Performing leave-one-out cross-validation to assess model accuracy...\n\n";
+    for (size_t i = 0; i < data.size(); ++i) {
+        const double actualY = data[i].getClose();
+        const double predictedY = slope * static_cast<double>(i) + intercept;
         
-        std::vector<ValidationResult> validationResults = validateAllModels(data);
-        displayValidationResults(validationResults);
-    }
-
-    // Offer prediction comparison chart
-    if (data.size() >= 4) {
-        std::cout << "\n" << std::string(60, '=') << "\n";
-        std::cout << "PREDICTION COMPARISON CHART AVAILABLE\n";
-        std::cout << std::string(60, '=') << "\n";
-        std::cout << "Generate a visual chart comparing actual temperatures with predictions\n";
-        std::cout << "from all three models across the historical period.\n";
-        std::cout << "\nThis creates 'Figure 4' style visualization showing:\n";
-        std::cout << "• Actual temperatures (o)\n";
-        std::cout << "• Linear model predictions (^)\n";
-        std::cout << "• Moving average predictions (#)\n";
-        std::cout << "• Heuristic model predictions (+)\n\n";
-        
-        std::string choice;
-        std::cout << "Would you like to generate the prediction comparison chart? (y/n): ";
-        std::cin >> choice;
-        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
-        
-        if (choice == "y" || choice == "yes") {
-            displayPredictionComparisonChart(data, timeframe, country, startYear, endYear);
-        }
+        totalSumSquares += std::pow(actualY - meanY, 2);
+        residualSumSquares += std::pow(actualY - predictedY, 2);
     }
     
-    std::cout << "\n";
+    if (totalSumSquares < EPSILON) return 0.0;
+    
+    const double rSquared = 1.0 - (residualSumSquares / totalSumSquares);
+    return std::max(0.0, rSquared);
 }
+
+double Prediction::calculateStabilityConfidence(
+    const std::vector<Candlestick>& data, 
+    int windowSize) noexcept {
+    
+    if (data.size() < 2 || windowSize < 2) return 0.0;
+    
+    const auto start = std::max(0, static_cast<int>(data.size()) - windowSize);
+    std::vector<double> recentValues;
+    recentValues.reserve(windowSize);
+    
+    for (int i = start; i < static_cast<int>(data.size()); ++i) {
+        recentValues.push_back(data[i].getClose());
+    }
+    
+    if (recentValues.size() < 2) return 0.0;
+    
+    const double mean = calculateMean(recentValues);
+    const double stdDev = calculateStandardDeviation(recentValues, mean);
+    
+    const double relativeVolatility = (mean > 0) ? stdDev / std::abs(mean) : stdDev;
+    const double stabilityConfidence = 1.0 / (1.0 + relativeVolatility * PredictionConfig::STABILITY_SCALE_FACTOR);
+    
+    return std::clamp(stabilityConfidence, 0.0, 1.0);
+}
+
+double Prediction::calculateConsistencyConfidence(const std::vector<Candlestick>& data) noexcept {
+    if (data.size() < 3) return 0.0;
+    
+    std::vector<double> changes;
+    changes.reserve(data.size() - 1);
+    
+    for (size_t i = 1; i < data.size(); ++i) {
+        changes.push_back(data[i].getClose() - data[i-1].getClose());
+    }
+    
+    if (changes.size() < 2) return 0.0;
+    
+    const double changeMean = calculateMean(changes);
+    const double changeStdDev = calculateStandardDeviation(changes, changeMean);
+    
+    const double changeVariability = changeStdDev / (std::abs(changeMean) + 1.0);
+    const double consistencyConfidence = 1.0 / (1.0 + changeVariability);
+    
+    return std::clamp(consistencyConfidence, 0.0, 1.0);
+}
+
+// Input validation methods
+
+bool Prediction::validateDataSize(
+    const std::vector<Candlestick>& data, 
+    size_t minSize, 
+    std::string& errorMessage) noexcept {
+    
+    if (data.size() < minSize) {
+        std::ostringstream oss;
+        oss << "Insufficient data (need at least " << minSize << " points, got " << data.size() << ")";
+        errorMessage = oss.str();
+        return false;
+    }
+    return true;
+}
+
+bool Prediction::validateWindowSize(
+    int windowSize, 
+    size_t dataSize, 
+    std::string& errorMessage) noexcept {
+    
+    if (windowSize <= 0) {
+        errorMessage = "Window size must be positive";
+        return false;
+    }
+    
+    if (static_cast<size_t>(windowSize) > dataSize) {
+        std::ostringstream oss;
+        oss << "Window size (" << windowSize << ") cannot exceed data size (" << dataSize << ")";
+        errorMessage = oss.str();
+        return false;
+    }
+    
+    return true;
+}
+
+// Display validation results
 
 void Prediction::displayValidationResults(const std::vector<ValidationResult>& results) {
     if (results.empty()) {
@@ -658,15 +768,14 @@ void Prediction::displayValidationResults(const std::vector<ValidationResult>& r
         const ValidationResult& result = results[i];
         
         if (result.isValid) {
-            double rmse = std::sqrt(result.meanSquaredError);
-            double successRate = result.totalAttempts > 0 ? 
-                               (static_cast<double>(result.validPredictions) / result.totalAttempts) * 100.0 : 0.0;
+            double rmse = result.getRMSE();
+            double successRate = result.getSuccessRate();
             
             std::cout << std::left << std::setw(20) << modelNames[i]
-                      << std::setw(12) << (std::to_string(result.meanAbsoluteError).substr(0,5))
-                      << std::setw(12) << (std::to_string(rmse).substr(0,5))
-                      << std::setw(12) << (std::to_string(result.maxError).substr(0,5))
-                      << std::setw(15) << (std::to_string(successRate).substr(0,5) + "%") << "\n";
+                      << std::setw(12) << formatDouble(result.meanAbsoluteError, 2)
+                      << std::setw(12) << formatDouble(rmse, 2)
+                      << std::setw(12) << formatDouble(result.maxError, 2)
+                      << std::setw(15) << (formatDouble(successRate, 1) + "%") << "\n";
         } else {
             std::cout << std::left << std::setw(20) << modelNames[i] 
                       << std::setw(50) << ("Error: " + result.errorMessage) << "\n";
@@ -686,143 +795,120 @@ void Prediction::displayValidationResults(const std::vector<ValidationResult>& r
     
     if (bestValidationModel != "None") {
         std::cout << "\n🏆 BEST VALIDATION PERFORMANCE: " << bestValidationModel 
-                  << " (MAE: " << std::fixed << std::setprecision(2) << bestMAE << "°C)\n";
+                  << " (MAE: " << formatDouble(bestMAE, 2) << "°C)\n";
         std::cout << "   Note: Lower MAE indicates better historical prediction accuracy\n";
     }
 }
 
-// Private helper methods implementation
+// Formatting utility methods
 
-double Prediction::calculateRSquaredDetailed(const std::vector<Candlestick>& data, 
-                                           double slope, double intercept) {
-    if (data.size() < 2) return 0.0;
-    
-    // Calculate mean of y values
-    double sumY = 0.0;
-    for (const auto& candle : data) {
-        sumY += candle.getClose();
-    }
-    double meanY = sumY / data.size();
-    
-    // Calculate total sum of squares and residual sum of squares
-    double totalSumSquares = 0.0;
-    double residualSumSquares = 0.0;
-    
-    for (size_t i = 0; i < data.size(); i++) {
-        double actualY = data[i].getClose();
-        double predictedY = slope * static_cast<double>(i) + intercept;
-        
-        totalSumSquares += (actualY - meanY) * (actualY - meanY);
-        residualSumSquares += (actualY - predictedY) * (actualY - predictedY);
-    }
-    
-    // Calculate R² = 1 - (residual SS / total SS)
-    if (totalSumSquares < Constants::EPSILON) return 0.0;  // Avoid division by zero
-    
-    double rSquared = 1.0 - (residualSumSquares / totalSumSquares);
-    return std::max(0.0, rSquared);  // Ensure non-negative
+std::string Prediction::formatTemperature(double temp, int precision) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << temp;
+    return oss.str();
 }
 
-double Prediction::calculateStabilityConfidence(const std::vector<Candlestick>& data, 
-                                               int windowSize) {
-    if (data.size() < 2 || windowSize < 2) return 0.0;
-    
-    // Calculate recent volatility
-    std::vector<double> recentValues;
-    int start = std::max(0, static_cast<int>(data.size()) - windowSize);
-    
-    for (int i = start; i < static_cast<int>(data.size()); i++) {
-        recentValues.push_back(data[i].getClose());
+std::string Prediction::formatConfidence(double confidence, int precision) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << confidence;
+    return oss.str();
+}
+
+std::string Prediction::formatDouble(double value, int precision) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << value;
+    return oss.str();
+}
+
+std::string Prediction::getConfidenceLevel(double confidence) noexcept {
+    if (confidence > PredictionConfig::HIGH_CONFIDENCE_THRESHOLD) {
+        return "High";
+    } else if (confidence > PredictionConfig::MODERATE_CONFIDENCE_THRESHOLD) {
+        return "Moderate";
+    } else {
+        return "Low";
     }
-    
-    if (recentValues.size() < 2) return 0.0;
-    
-    double mean = calculateMean(recentValues);
-    double stdDev = calculateStandardDeviation(recentValues, mean);
-    
-    // Convert to stability confidence (inverse of relative volatility)
-    // Higher volatility = lower confidence
-    double relativeVolatility = (mean > 0) ? stdDev / std::abs(mean) : stdDev;
-    double stabilityConfidence = 1.0 / (1.0 + relativeVolatility * Constants::STABILITY_SCALE_FACTOR);
-    
-    return std::min(1.0, std::max(0.0, stabilityConfidence));
 }
 
-double Prediction::calculateConsistencyConfidence(const std::vector<Candlestick>& data) {
-    if (data.size() < 3) return 0.0;
+std::string Prediction::getMonthName(int month) noexcept {
+    static const std::vector<std::string> months = {
+        "", "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    };
     
-    // Calculate recent trend changes
-    std::vector<double> changes;
-    for (size_t i = 1; i < data.size(); i++) {
-        double change = data[i].getClose() - data[i-1].getClose();
-        changes.push_back(change);
+    return (month >= 1 && month <= 12) ? months[month] : "Unknown";
+}
+
+// Chart utility methods
+
+int Prediction::calculateChartPosition(
+    double value, double minVal, double maxVal, int chartWidth) noexcept {
+    
+    if (maxVal <= minVal) return chartWidth / 2;
+    
+    const double normalized = (value - minVal) / (maxVal - minVal);
+    const int pos = static_cast<int>(normalized * (chartWidth - 1));
+    
+    return std::clamp(pos, 0, chartWidth - 1);
+}
+
+void Prediction::generateChartLine(
+    std::vector<char>& chartLine,
+    const std::vector<std::pair<double, char>>& values,
+    double minTemp, double maxTemp) noexcept {
+    
+    const int chartWidth = static_cast<int>(chartLine.size());
+    
+    for (const auto& [value, symbol] : values) {
+        const int pos = calculateChartPosition(value, minTemp, maxTemp, chartWidth);
+        if (pos >= 0 && pos < chartWidth) {
+            if (chartLine[pos] == ' ') {
+                chartLine[pos] = symbol;
+            } else {
+                chartLine[pos] = '*';  // Multiple values at same position
+            }
+        }
     }
-    
-    if (changes.size() < 2) return 0.0;
-    
-    // Calculate consistency as inverse of change variability
-    double changeMean = calculateMean(changes);
-    double changeStdDev = calculateStandardDeviation(changes, changeMean);
-    
-    // Convert to consistency confidence
-    double changeVariability = changeStdDev / (std::abs(changeMean) + 1.0);  // Add 1 to avoid division by zero
-    double consistencyConfidence = 1.0 / (1.0 + changeVariability);
-    
-    return std::min(1.0, std::max(0.0, consistencyConfidence));
 }
 
-double Prediction::calculateMean(const std::vector<double>& values) {
-    if (values.empty()) return 0.0;
-    return std::accumulate(values.begin(), values.end(), 0.0) / values.size();
-}
-
-double Prediction::calculateStandardDeviation(const std::vector<double>& values, double mean) {
-    if (values.size() < 2) return 0.0;
-    
-    double sumSquaredDiffs = 0.0;
-    for (double value : values) {
-        double diff = value - mean;
-        sumSquaredDiffs += diff * diff;
-    }
-    
-    return std::sqrt(sumSquaredDiffs / (values.size() - 1));
-}
-
-// Legacy methods implementation (for backward compatibility)
+// Legacy compatibility methods
 
 double Prediction::predictLinear(const std::vector<Candlestick>& data) {
-    PredictionResult result = predictLinearWithConfidence(data);
+    const auto result = predictLinearWithConfidence(data);
     return result.isValid ? result.predictionValue : 0.0;
 }
 
 double Prediction::predictMovingAverage(const std::vector<Candlestick>& data, int windowSize) {
-    PredictionResult result = predictMovingAverageWithConfidence(data, windowSize);
+    const auto result = predictMovingAverageWithConfidence(data, windowSize);
     return result.isValid ? result.predictionValue : 0.0;
 }
 
 double Prediction::predictHeuristic(const std::vector<Candlestick>& data) {
-    PredictionResult result = predictHeuristicWithConfidence(data);
+    const auto result = predictHeuristicWithConfidence(data);
     return result.isValid ? result.predictionValue : 0.0;
 }
 
-void Prediction::displayPredictionResults(const std::vector<Candlestick>& data,
-                                        TimeFrame timeframe,
-                                        const std::string& country,
-                                        int startYear, int endYear) {
-    // Use the enhanced version without cross-validation for backward compatibility
-    displayEnhancedPredictionResults(data, timeframe, country, startYear, endYear, false);
+void Prediction::displayPredictionResults(
+    const std::vector<Candlestick>& data,
+    TimeFrame timeframe,
+    std::string_view country,
+    int startYear, int endYear) {
+    
+    displayEnhancedPredictionResults(data, timeframe, country, startYear, endYear, {});
 }
 
 double Prediction::calculateLinearRSquared(const std::vector<Candlestick>& data) {
-    PredictionResult result = predictLinearWithConfidence(data);
+    const auto result = predictLinearWithConfidence(data);
     return result.isValid ? result.confidenceMetric : 0.0;
 }
 
-std::string Prediction::determineNextPeriod(const std::vector<Candlestick>& data, 
-                                           TimeFrame timeframe, int endYear) {
+std::string Prediction::determineNextPeriod(
+    const std::vector<Candlestick>& data, 
+    TimeFrame timeframe, int endYear) {
+    
     if (data.empty()) return "Unknown";
     
-    std::string lastDate = data.back().getDate();
+    const std::string& lastDate = data.back().getDate();
     
     switch (timeframe) {
         case TimeFrame::Yearly:
@@ -830,15 +916,18 @@ std::string Prediction::determineNextPeriod(const std::vector<Candlestick>& data
             
         case TimeFrame::Monthly:
             if (lastDate.length() >= 7) {
-                int year = std::stoi(lastDate.substr(0, 4));
-                int month = std::stoi(lastDate.substr(5, 2));
+                const int year = std::stoi(lastDate.substr(0, 4));
+                const int month = std::stoi(lastDate.substr(5, 2));
                 
                 if (month == 12) {
-                    return std::to_string(year + 1) + "-01 (January " + std::to_string(year + 1) + ")";
+                    std::ostringstream oss;
+                    oss << (year + 1) << "-01 (January " << (year + 1) << ")";
+                    return oss.str();
                 } else {
-                    return std::to_string(year) + "-" + 
-                           (month + 1 < 10 ? "0" : "") + std::to_string(month + 1) +
-                           " (" + getMonthName(month + 1) + " " + std::to_string(year) + ")";
+                    std::ostringstream oss;
+                    oss << year << "-" << std::setfill('0') << std::setw(2) << (month + 1)
+                        << " (" << getMonthName(month + 1) << " " << year << ")";
+                    return oss.str();
                 }
             }
             return "Next month after " + lastDate;
@@ -849,16 +938,4 @@ std::string Prediction::determineNextPeriod(const std::vector<Candlestick>& data
         default:
             return "Next period after " + lastDate;
     }
-}
-
-std::string Prediction::getMonthName(int month) {
-    const std::string months[] = {
-        "", "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    };
-    
-    if (month >= 1 && month <= 12) {
-        return months[month];
-    }
-    return "Unknown";
 }

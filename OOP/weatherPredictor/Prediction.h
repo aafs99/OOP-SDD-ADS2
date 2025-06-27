@@ -4,6 +4,12 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <memory>
+#include <optional>
+#include <string_view>
+#include <sstream>
+#include <iomanip>
+#include <limits>
 #include "Candlestick.h"
 #include "Common.h"
 
@@ -11,45 +17,52 @@
  * Structure to hold prediction results with confidence metrics
  */
 struct PredictionResult {
-    double predictionValue;      // The predicted temperature value
-    double confidenceMetric;     // Confidence/quality metric (0.0 to 1.0 or specific range)
-    std::string modelName;       // Descriptive name of the prediction model
-    bool isValid;               // Whether the prediction is valid
-    std::string errorMessage;   // Error description if prediction failed
-    std::string confidenceDescription; // Description of what the confidence metric means
+    double predictionValue{0.0};
+    double confidenceMetric{0.0};
+    std::string modelName;
+    bool isValid{false};
+    std::string errorMessage;
+    std::string confidenceDescription;
     
     // Constructor for successful prediction
-    PredictionResult(double prediction, double confidence, const std::string& name, 
-                    const std::string& confDesc = "") 
+    PredictionResult(double prediction, double confidence, std::string_view name, 
+                    std::string_view confDesc = "") 
         : predictionValue(prediction), confidenceMetric(confidence), modelName(name),
-          isValid(true), errorMessage(""), confidenceDescription(confDesc) {}
+          isValid(true), confidenceDescription(confDesc) {}
     
     // Constructor for failed prediction
-    PredictionResult(const std::string& error, const std::string& name)
-        : predictionValue(0.0), confidenceMetric(0.0), modelName(name),
-          isValid(false), errorMessage(error), confidenceDescription("") {}
+    PredictionResult(std::string_view error, std::string_view name)
+        : modelName(name), isValid(false), errorMessage(error) {}
     
-    // Default constructor
-    PredictionResult() : predictionValue(0.0), confidenceMetric(0.0), modelName("Unknown"),
-                        isValid(false), errorMessage("Uninitialized"), confidenceDescription("") {}
+    // Move semantics support
+    PredictionResult(PredictionResult&&) = default;
+    PredictionResult& operator=(PredictionResult&&) = default;
+    PredictionResult(const PredictionResult&) = default;
+    PredictionResult& operator=(const PredictionResult&) = default;
 };
 
 /**
- * Structure to hold cross-validation results
+ * Enhanced structure to hold cross-validation results
  */
 struct ValidationResult {
-    double meanAbsoluteError;    // MAE from cross-validation
-    double meanSquaredError;     // MSE from cross-validation  
-    double maxError;            // Maximum error observed
-    double minError;            // Minimum error observed
-    int validPredictions;       // Number of successful predictions
-    int totalAttempts;          // Total validation attempts
-    bool isValid;              // Whether validation succeeded
-    std::string errorMessage;   // Error description if validation failed
+    double meanAbsoluteError{0.0};
+    double meanSquaredError{0.0}; 
+    double maxError{0.0};
+    double minError{0.0};
+    int validPredictions{0};
+    int totalAttempts{0};
+    bool isValid{false};
+    std::string errorMessage;
     
-    ValidationResult() : meanAbsoluteError(0.0), meanSquaredError(0.0), maxError(0.0), 
-                        minError(0.0), validPredictions(0), totalAttempts(0), 
-                        isValid(false), errorMessage("Uninitialized") {}
+    // Calculated properties
+    [[nodiscard]] double getRMSE() const noexcept { 
+        return std::sqrt(meanSquaredError); 
+    }
+    
+    [[nodiscard]] double getSuccessRate() const noexcept {
+        return totalAttempts > 0 ? 
+               static_cast<double>(validPredictions) / totalAttempts * 100.0 : 0.0;
+    }
 };
 
 /**
@@ -58,206 +71,198 @@ struct ValidationResult {
 using PredictionFunction = std::function<PredictionResult(const std::vector<Candlestick>&)>;
 
 /**
- * TASK 4: Enhanced Temperature Prediction System with Confidence Metrics
- * 
+ * Configuration for prediction display
+ */
+struct PredictionConfig {
+    bool showValidation{false};
+    bool showChart{false};
+    int chartWidth{50};
+    int movingAverageWindow{3};
+    
+    static constexpr double HIGH_CONFIDENCE_THRESHOLD = 0.7;
+    static constexpr double MODERATE_CONFIDENCE_THRESHOLD = 0.4;
+    static constexpr double STABILITY_SCALE_FACTOR = 5.0;
+    static constexpr double CHART_PADDING_RATIO = 0.1;
+};
+
+/**
  * Provides robust prediction methods with confidence metrics and cross-validation
+ * Modern C++ implementation with improved error handling and performance
  */
 class Prediction {
 public:
-    // Enhanced prediction methods returning PredictionResult with confidence metrics
+    // Enhanced prediction methods
+    [[nodiscard]] static PredictionResult predictLinearWithConfidence(
+        const std::vector<Candlestick>& data);
     
-    /**
-     * Linear Regression Prediction with R² Confidence Metric
-     * 
-     * Uses least squares method with comprehensive confidence calculation
-     * Confidence metric: R² value (0.0 to 1.0, higher = better fit)
-     * 
-     * @param data Vector of temperature candlestick data
-     * @return PredictionResult with prediction, R² confidence, and model details
-     */
-    static PredictionResult predictLinearWithConfidence(const std::vector<Candlestick>& data);
-
-    /**
-     * Moving Average Prediction with Stability Confidence Metric
-     * 
-     * Calculates moving average with stability-based confidence
-     * Confidence metric: Inverse of recent volatility (0.0 to 1.0, higher = more stable)
-     * 
-     * @param data Vector of temperature candlestick data
-     * @param windowSize Number of recent periods to average
-     * @return PredictionResult with prediction, stability confidence, and model details
-     */
-    static PredictionResult predictMovingAverageWithConfidence(const std::vector<Candlestick>& data, 
-                                                              int windowSize = 3);
-
-    /**
-     * Heuristic (Momentum) Prediction with Consistency Confidence Metric
-     * 
-     * Projects momentum with consistency-based confidence
-     * Confidence metric: Based on trend consistency (0.0 to 1.0, higher = more consistent)
-     * 
-     * @param data Vector of temperature candlestick data
-     * @return PredictionResult with prediction, consistency confidence, and model details
-     */
-    static PredictionResult predictHeuristicWithConfidence(const std::vector<Candlestick>& data);
-
-    // Cross-validation methods for model evaluation
+    [[nodiscard]] static PredictionResult predictMovingAverageWithConfidence(
+        const std::vector<Candlestick>& data, int windowSize = 3);
     
-    /**
-     * Validate model using leave-one-out cross-validation
-     * 
-     * Performs comprehensive model validation by:
-     * 1. Using each data point as test case
-     * 2. Training on all previous points
-     * 3. Calculating prediction errors
-     * 4. Computing statistical metrics
-     * 
-     * @param data Vector of temperature data for validation
-     * @param modelFunction Function pointer to prediction model
-     * @param minTrainingSize Minimum number of points needed for training
-     * @return ValidationResult with MAE, MSE, and other metrics
-     */
-    static ValidationResult validateModel(const std::vector<Candlestick>& data,
-                                        PredictionFunction modelFunction,
-                                        int minTrainingSize = 2);
+    [[nodiscard]] static PredictionResult predictHeuristicWithConfidence(
+        const std::vector<Candlestick>& data);
 
-    /**
-     * Validate all prediction models and compare performance
-     * 
-     * @param data Vector of temperature data
-     * @return Vector of ValidationResult for each model
-     */
-    static std::vector<ValidationResult> validateAllModels(const std::vector<Candlestick>& data);
-
-    /**
-     * Generate rolling predictions for visualization and comparison
-     * 
-     * Creates predictions for each historical period using only data available
-     * up to that point, enabling comparison with actual values
-     * 
-     * @param data Vector of temperature data
-     * @param startIndex Starting index for predictions (minimum data needed)
-     * @return Vector of PredictionResult for each period
-     */
-    static std::vector<PredictionResult> generateRollingPredictions(
+    // Cross-validation methods
+    [[nodiscard]] static ValidationResult validateModel(
         const std::vector<Candlestick>& data,
-        PredictionFunction modelFunction,
-        int startIndex = 2
-    );
+        const PredictionFunction& modelFunction,
+        int minTrainingSize = 2);
 
-    /**
-     * Create prediction comparison chart
-     * 
-     * Generates a chart showing actual temperatures alongside predictions
-     * from all three models for visual comparison and validation
-     * 
-     * @param data Vector of temperature data
-     * @param timeframe Data aggregation level
-     * @param country Country code being analyzed
-     * @param startYear Starting year of data range
-     * @param endYear Ending year of data range
-     */
-    static void displayPredictionComparisonChart(const std::vector<Candlestick>& data,
-                                               TimeFrame timeframe,
-                                               const std::string& country,
-                                               int startYear, int endYear);
+    [[nodiscard]] static std::vector<ValidationResult> validateAllModels(
+        const std::vector<Candlestick>& data);
 
-    // Display methods for enhanced results
-    
-    /**
-     * Display prediction results with confidence metrics
-     * 
-     * Shows enhanced prediction analysis including:
-     * - All three models with confidence metrics
-     * - Confidence interpretations
-     * - Model recommendations based on confidence
-     * - Cross-validation results if requested
-     * 
-     * @param data Vector of temperature data
-     * @param timeframe Data aggregation level
-     * @param country Country code being analyzed
-     * @param startYear Starting year of data range
-     * @param endYear Ending year of data range
-     * @param showValidation Whether to include cross-validation analysis
-     */
-    static void displayEnhancedPredictionResults(const std::vector<Candlestick>& data,
-                                                TimeFrame timeframe,
-                                                const std::string& country,
-                                                int startYear, int endYear,
-                                                bool showValidation = false);
+    // Rolling predictions for visualization
+    [[nodiscard]] static std::vector<PredictionResult> generateRollingPredictions(
+        const std::vector<Candlestick>& data,
+        const PredictionFunction& modelFunction,
+        int startIndex = 2);
 
-    /**
-     * Display cross-validation results
-     * 
-     * @param results Vector of validation results for different models
-     */
+    // Display methods
+    static void displayEnhancedPredictionResults(
+        const std::vector<Candlestick>& data,
+        TimeFrame timeframe,
+        std::string_view country,
+        int startYear, int endYear,
+        const PredictionConfig& config = {});
+
+    static void displayPredictionComparisonChart(
+        const std::vector<Candlestick>& data,
+        TimeFrame timeframe,
+        std::string_view country,
+        int startYear, int endYear,
+        const PredictionConfig& config = {});
+
     static void displayValidationResults(const std::vector<ValidationResult>& results);
+    
+    // New helper display methods
+    static void displayPredictionSummary(
+        const std::vector<PredictionResult>& results,
+        const std::string& nextPeriod);
+    
+    static void displayPredictionTable(
+        const std::vector<PredictionResult>& results,
+        const std::string& nextPeriod);
+    
+    static void displayRecommendation(const std::vector<PredictionResult>& results);
+    
+    static void displayChartHeader();
+    static void displayChartLegend();
+    
+    static void displayChartData(
+        const std::vector<Candlestick>& data,
+        const std::vector<std::vector<PredictionResult>>& allPredictions,
+        TimeFrame timeframe,
+        int startYear,
+        const PredictionConfig& config);
+    
+    static void displayChartFooter(
+        const std::vector<Candlestick>& data,
+        const PredictionConfig& config);
+    
+    static void displayAccuracyAnalysis(
+        const std::vector<Candlestick>& data,
+        const std::vector<std::vector<PredictionResult>>& allPredictions);
+    
+    static std::vector<std::vector<PredictionResult>> generateAllRollingPredictions(
+        const std::vector<Candlestick>& data);
 
-    // Legacy methods (maintained for backward compatibility)
-    static double predictLinear(const std::vector<Candlestick>& data);
-    static double predictMovingAverage(const std::vector<Candlestick>& data, int windowSize = 3);
-    static double predictHeuristic(const std::vector<Candlestick>& data);
-    static void displayPredictionResults(const std::vector<Candlestick>& data,
-                                       TimeFrame timeframe,
-                                       const std::string& country,
-                                       int startYear, int endYear);
+    // Legacy compatibility methods
+    [[nodiscard]] static double predictLinear(const std::vector<Candlestick>& data);
+    [[nodiscard]] static double predictMovingAverage(const std::vector<Candlestick>& data, int windowSize = 3);
+    [[nodiscard]] static double predictHeuristic(const std::vector<Candlestick>& data);
+    
+    static void displayPredictionResults(
+        const std::vector<Candlestick>& data,
+        TimeFrame timeframe,
+        std::string_view country,
+        int startYear, int endYear);
 
-    // Helper methods
-    static double calculateLinearRSquared(const std::vector<Candlestick>& data);
-    static std::string determineNextPeriod(const std::vector<Candlestick>& data,
-                                         TimeFrame timeframe, int endYear);
+    // Utility methods
+    [[nodiscard]] static double calculateLinearRSquared(const std::vector<Candlestick>& data);
+    [[nodiscard]] static std::string determineNextPeriod(
+        const std::vector<Candlestick>& data,
+        TimeFrame timeframe, int endYear);
 
 private:
-    // Internal calculation methods
+    // Statistical calculation methods
+    [[nodiscard]] static double calculateRSquaredDetailed(
+        const std::vector<Candlestick>& data, 
+        double slope, double intercept) noexcept;
+
+    [[nodiscard]] static double calculateStabilityConfidence(
+        const std::vector<Candlestick>& data, 
+        int windowSize) noexcept;
+
+    [[nodiscard]] static double calculateConsistencyConfidence(
+        const std::vector<Candlestick>& data) noexcept;
+
+    // Statistical utilities
+    template<typename Container>
+    [[nodiscard]] static double calculateMean(const Container& values) noexcept;
+
+    template<typename Container>
+    [[nodiscard]] static double calculateStandardDeviation(
+        const Container& values, double mean) noexcept;
+
+    // Formatting utility methods
+    [[nodiscard]] static std::string formatTemperature(double temp, int precision = 1);
+    [[nodiscard]] static std::string formatConfidence(double confidence, int precision = 3);
+    [[nodiscard]] static std::string getConfidenceLevel(double confidence) noexcept;
+    [[nodiscard]] static std::string getMonthName(int month) noexcept;
     
-    /**
-     * Calculate R² coefficient of determination for linear regression
-     * 
-     * R² = 1 - (Residual Sum of Squares / Total Sum of Squares)
-     * Range: 0.0 to 1.0 (higher = better fit)
-     * 
-     * @param data Vector of temperature data
-     * @param slope Linear regression slope
-     * @param intercept Linear regression intercept
-     * @return R² value
-     */
-    static double calculateRSquaredDetailed(const std::vector<Candlestick>& data, 
-                                          double slope, double intercept);
+    // String formatting helpers
+    [[nodiscard]] static std::string formatDouble(double value, int precision = 2);
+    
+    // Chart utilities
+    [[nodiscard]] static int calculateChartPosition(
+        double value, double minVal, double maxVal, int chartWidth) noexcept;
+    
+    static void generateChartLine(
+        std::vector<char>& chartLine,
+        const std::vector<std::pair<double, char>>& values,
+        double minTemp, double maxTemp) noexcept;
 
-    /**
-     * Calculate stability confidence for moving average
-     * Based on inverse of recent volatility
-     * 
-     * @param data Vector of temperature data
-     * @param windowSize Window size for calculation
-     * @return Stability confidence (0.0 to 1.0)
-     */
-    static double calculateStabilityConfidence(const std::vector<Candlestick>& data, 
-                                             int windowSize);
+    // Input validation
+    [[nodiscard]] static bool validateDataSize(
+        const std::vector<Candlestick>& data, 
+        size_t minSize, 
+        std::string& errorMessage) noexcept;
 
-    /**
-     * Calculate consistency confidence for heuristic model
-     * Based on trend consistency in recent periods
-     * 
-     * @param data Vector of temperature data
-     * @return Consistency confidence (0.0 to 1.0)
-     */
-    static double calculateConsistencyConfidence(const std::vector<Candlestick>& data);
+    [[nodiscard]] static bool validateWindowSize(
+        int windowSize, 
+        size_t dataSize, 
+        std::string& errorMessage) noexcept;
 
-    /**
-     * Helper method to calculate mean of values
-     */
-    static double calculateMean(const std::vector<double>& values);
-
-    /**
-     * Helper method to calculate standard deviation
-     */
-    static double calculateStandardDeviation(const std::vector<double>& values, double mean);
-
-    /**
-     * Get month name from number (1-12)
-     */
-    static std::string getMonthName(int month);
+    // Constants
+    static constexpr double EPSILON = 1e-10;
+    static constexpr size_t MIN_LINEAR_DATA_SIZE = 2;
+    static constexpr size_t MIN_HEURISTIC_DATA_SIZE = 2;
+    static constexpr int DEFAULT_CHART_WIDTH = 50;
+    static constexpr int MAX_CHART_WIDTH = 120;
 };
 
-#endif
+// Template implementations
+template<typename Container>
+double Prediction::calculateMean(const Container& values) noexcept {
+    if (values.empty()) return 0.0;
+    
+    double sum = 0.0;
+    for (const auto& value : values) {
+        sum += value;
+    }
+    return sum / values.size();
+}
+
+template<typename Container>
+double Prediction::calculateStandardDeviation(const Container& values, double mean) noexcept {
+    if (values.size() < 2) return 0.0;
+    
+    double sumSquaredDiffs = 0.0;
+    for (const auto& value : values) {
+        const double diff = value - mean;
+        sumSquaredDiffs += diff * diff;
+    }
+    
+    return std::sqrt(sumSquaredDiffs / (values.size() - 1));
+}
+
+#endif // PREDICTION_H

@@ -226,7 +226,7 @@ namespace {
         double upPercent = 100.0 * upCount / candlesticks.size();
 
         // Print summary
-        std::cout << "Legend: Wick: |, Up-Trend: " << ANSI_COLOR_GREEN << PlotConfiguration().upTrendBody 
+        std::cout << "Legend:\n Wick: |, Up-Trend: " << ANSI_COLOR_GREEN << PlotConfiguration().upTrendBody 
         << ANSI_COLOR_RESET << ", Down-Trend: " << ANSI_COLOR_RED << PlotConfiguration().downTrendBody 
         << ANSI_COLOR_RESET << "\n\n";
         
