@@ -23,6 +23,7 @@ std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::s
         return data;
     }
     
+    // ENHANCED: More robust column name matching
     std::string targetColumn = countryCode + "_temperature";
     int countryColumnIndex = -1;
     int currentIndex = 0;
@@ -31,8 +32,9 @@ std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::s
     std::string column;
     
     while (std::getline(headerStream, column, ',')) {
-        column.erase(0, column.find_first_not_of(" \t"));
-        column.erase(column.find_last_not_of(" \t") + 1);
+        // Remove quotes if present and trim whitespace
+        column.erase(0, column.find_first_not_of(" \t\""));
+        column.erase(column.find_last_not_of(" \t\"") + 1);
         
         if (column == targetColumn) {
             countryColumnIndex = currentIndex;
@@ -44,12 +46,29 @@ std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::s
     if (countryColumnIndex == -1) {
         std::cerr << "Error: Country '" << countryCode << "' not found in CSV." << std::endl;
         std::cerr << "Looking for column: '" << targetColumn << "'" << std::endl;
-        std::cerr << "Available columns in header: " << header << std::endl;
+        
+        // ENHANCED: Show available country columns to help user
+        std::cerr << "Available country columns: ";
+        std::stringstream tempHeaderStream(header);
+        std::string tempColumn;
+        bool foundCountryColumns = false;
+        while (std::getline(tempHeaderStream, tempColumn, ',')) {
+            tempColumn.erase(0, tempColumn.find_first_not_of(" \t\""));
+            tempColumn.erase(tempColumn.find_last_not_of(" \t\"") + 1);
+            if (tempColumn.length() == 2 || tempColumn.find("_temperature") != std::string::npos) {
+                if (foundCountryColumns) std::cerr << ", ";
+                std::cerr << tempColumn;
+                foundCountryColumns = true;
+            }
+        }
+        std::cerr << std::endl;
         return data;
     }
     
     std::string line;
     int lineNumber = 1;
+    int validRecords = 0;
+    int skippedRecords = 0;
     
     while (std::getline(file, line)) {
         lineNumber++;
@@ -60,21 +79,33 @@ std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::s
         std::stringstream lineStream(line);
         std::string cell;
         
-        while (std::getline(lineStream, cell, ',')) {
-            columns.push_back(cell);
+        // ENHANCED: Better CSV parsing to handle quoted values
+        bool inQuotes = false;
+        std::string currentCell;
+        
+        for (char c : line) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                columns.push_back(currentCell);
+                currentCell.clear();
+            } else {
+                currentCell += c;
+            }
         }
+        columns.push_back(currentCell); // Add the last cell
         
         if (columns.size() <= static_cast<size_t>(countryColumnIndex)) {
-            std::cerr << "Warning: Line " << lineNumber << " has insufficient columns. Skipping." << std::endl;
+            skippedRecords++;
             continue;
         }
         
         std::string dateStr = columns[0];
-        dateStr.erase(0, dateStr.find_first_not_of(" \t"));
-        dateStr.erase(dateStr.find_last_not_of(" \t") + 1);
+        dateStr.erase(0, dateStr.find_first_not_of(" \t\""));
+        dateStr.erase(dateStr.find_last_not_of(" \t\"") + 1);
         
         if (dateStr.length() < 4) {
-            std::cerr << "Warning: Invalid date format on line " << lineNumber << ": '" << dateStr << "'. Skipping." << std::endl;
+            skippedRecords++;
             continue;
         }
         
@@ -84,32 +115,53 @@ std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::s
         try {
             year = std::stoi(yearStr);
         } catch (const std::exception& e) {
-            std::cerr << "Warning: Could not parse year from '" << yearStr << "' on line " << lineNumber << ". Skipping." << std::endl;
+            skippedRecords++;
             continue;
         }
         
         if (year < startYear || year > endYear) continue;
         
         std::string tempStr = columns[countryColumnIndex];
-        tempStr.erase(0, tempStr.find_first_not_of(" \t"));
-        tempStr.erase(tempStr.find_last_not_of(" \t") + 1);
+        tempStr.erase(0, tempStr.find_first_not_of(" \t\""));
+        tempStr.erase(tempStr.find_last_not_of(" \t\"") + 1);
         
-        if (tempStr.empty() || tempStr == "NA" || tempStr == "N/A" || tempStr == "-") {
+        // ENHANCED: More comprehensive handling of missing values
+        if (tempStr.empty() || tempStr == "NA" || tempStr == "N/A" || 
+            tempStr == "-" || tempStr == "null" || tempStr == "NULL" ||
+            tempStr == "nan" || tempStr == "NaN") {
             continue;
         }
         
         double temperature;
         try {
             temperature = std::stod(tempStr);
+            
+            // ENHANCED: Sanity check for temperature values (reasonable range for Earth)
+            if (temperature < -100.0 || temperature > 100.0) {
+                std::cerr << "Warning: Unusual temperature value " << temperature 
+                          << "°C on line " << lineNumber << ". Skipping." << std::endl;
+                skippedRecords++;
+                continue;
+            }
+            
         } catch (const std::exception& e) {
-            std::cerr << "Warning: Could not parse temperature '" << tempStr << "' on line " << lineNumber << ". Skipping." << std::endl;
+            skippedRecords++;
             continue;
         }
         
         data.push_back(TemperatureRecord(dateStr, temperature));
+        validRecords++;
     }
     
     file.close();
+    
+    // ENHANCED: Provide summary of data loading
+    std::cout << "Data loading summary:" << std::endl;
+    std::cout << "  Valid records loaded: " << validRecords << std::endl;
+    if (skippedRecords > 0) {
+        std::cout << "  Records skipped: " << skippedRecords << std::endl;
+    }
+    
     return data;
 }
 
