@@ -10,6 +10,14 @@
 #include <vector>
 #include <map>
 
+#ifdef _WIN32
+    #include <windows.h>
+    #include <cstdlib>
+#else
+    #include <cstdlib>
+    #include <unistd.h>
+#endif
+
 namespace {
     // Use a map as a single source of truth for country codes and their full names.
     const std::map<std::string, std::string> AVAILABLE_COUNTRIES = {
@@ -247,16 +255,36 @@ void displayAvailableCountries() {
     }
 }
 
+// FIXED: Improved cross-platform screen clearing
 void clearScreen() {
-    // Use ANSI escape codes to clear screen - works on most modern terminals
-    std::cout << "\033[2J\033[H" << std::flush;
-    
-    // Alternative: Use system-specific commands
-    // #ifdef _WIN32
-    //     system("cls");
-    // #else
-    //     system("clear");
-    // #endif
+    #ifdef _WIN32
+        // Windows
+        HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hStdOut != INVALID_HANDLE_VALUE) {
+            CONSOLE_SCREEN_BUFFER_INFO csbi;
+            if (GetConsoleScreenBufferInfo(hStdOut, &csbi)) {
+                DWORD written;
+                COORD topLeft = { 0, 0 };
+                DWORD consoleSize = csbi.dwSize.X * csbi.dwSize.Y;
+                FillConsoleOutputCharacter(hStdOut, ' ', consoleSize, topLeft, &written);
+                FillConsoleOutputAttribute(hStdOut, csbi.wAttributes, consoleSize, topLeft, &written);
+                SetConsoleCursorPosition(hStdOut, topLeft);
+                return;
+            }
+        }
+        // Fallback for Windows
+        system("cls");
+    #else
+        // Unix/Linux/macOS
+        // Try ANSI escape codes first (works on most modern terminals)
+        if (isatty(STDOUT_FILENO)) {
+            std::cout << "\033[2J\033[H" << std::flush;
+        } else {
+            // Fallback for Unix systems
+            int result = system("clear");
+            (void)result;  // Suppress unused variable warning
+        }
+    #endif
 }
 
 void waitForUser() {
@@ -272,10 +300,10 @@ bool askForPredictionChart() {
     std::cout << "Generate a visual chart comparing actual temperatures with predictions\n";
     std::cout << "from all three models across the historical period.\n";
     std::cout << "\nThis creates 'Figure 4' style visualization showing:\n";
-    std::cout << "• Actual temperatures (black dots)\n";
-    std::cout << "• Linear model predictions (blue triangles)\n";
-    std::cout << "• Moving average predictions (green squares)\n";
-    std::cout << "• Heuristic model predictions (red diamonds)\n";
+    std::cout << "• Actual temperatures (o)\n";
+    std::cout << "• Linear model predictions (^)\n";
+    std::cout << "• Moving average predictions (#)\n";
+    std::cout << "• Heuristic model predictions (+)\n";
     std::cout << "\nWould you like to generate the prediction comparison chart? (y/n): ";
     
     while (true) {

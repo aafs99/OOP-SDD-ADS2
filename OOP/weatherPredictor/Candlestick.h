@@ -25,7 +25,19 @@ public:
     // Utility methods
     bool isUptrend() const { return close_ >= open_; }
     double getVolatility() const { return high_ - low_; }
-    double getAverage() const { return close_; } // Using close as average temperature
+    
+    // FIXED: Renamed and documented confusing method
+    /**
+     * @brief Gets the mean temperature for this period
+     * @return The average temperature (same as close value)
+     * @note In our temperature candlestick model, 'close' represents 
+     *       the calculated average temperature for the time period
+     */
+    double getMeanTemperature() const { return close_; }
+    
+    // Legacy method for backward compatibility
+    [[deprecated("Use getMeanTemperature() instead for clarity")]]
+    double getAverage() const { return close_; }
 };
 
 #endif

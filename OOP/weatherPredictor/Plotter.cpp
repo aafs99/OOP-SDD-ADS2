@@ -11,7 +11,6 @@ namespace {
     // Chart display constants
     const int Y_AXIS_WIDTH = 8;
     const int MAX_CHART_WIDTH = 120;
-    const double PADDING_RATIO = 0.1;
 
     // ANSI color codes
     const std::string ANSI_COLOR_GREEN = "\033[32m";
@@ -147,13 +146,14 @@ namespace {
     }
     
     /**
-     * @brief Formats a date string into a readable label based on the timeframe.
+     * @brief FIXED: Formats a date string into a readable label based on the timeframe.
      */
     std::string formatDateLabel(const std::string& date, TimeFrame timeframe) {
         if (date.length() < 10) return date;
         
         std::string year = date.substr(0, 4);
         std::string month = date.substr(5, 2);
+        std::string day = date.substr(8, 2);
         std::string shortYear = date.substr(2, 2);
         
         const std::string monthNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -162,9 +162,13 @@ namespace {
             int monthNum = std::stoi(month);
             if (monthNum >= 1 && monthNum <= 12) {
                 switch (timeframe) {
-                    case TimeFrame::Daily:   return monthNames[monthNum - 1] + "'" + shortYear;
-                    case TimeFrame::Monthly: return monthNames[monthNum - 1] + " " + shortYear;
-                    case TimeFrame::Yearly:  return "'" + shortYear;
+                    case TimeFrame::Daily:   
+                        // FIXED: Show actual day for daily timeframe
+                        return day + "/" + month;  // e.g., "15/03" instead of "Mar'24"
+                    case TimeFrame::Monthly: 
+                        return monthNames[monthNum - 1] + " " + shortYear;
+                    case TimeFrame::Yearly:  
+                        return "'" + shortYear;
                 }
             }
         } catch (...) { /* Fallback below */ }
@@ -195,24 +199,19 @@ namespace {
         return config.emptySpace;
     }
 
-    double findMinTemperature(const std::vector<Candlestick>& candlesticks) {
-        if (candlesticks.empty()) return 0.0;
+    // FIXED: Optimized to find both min and max in single pass
+    std::pair<double, double> findTemperatureRange(const std::vector<Candlestick>& candlesticks) {
+        if (candlesticks.empty()) return {0.0, 0.0};
         
         double minTemp = candlesticks[0].getLow();
+        double maxTemp = candlesticks[0].getHigh();
+        
         for (const auto& candle : candlesticks) {
             minTemp = std::min(minTemp, candle.getLow());
-        }
-        return minTemp;
-    }
-
-    double findMaxTemperature(const std::vector<Candlestick>& candlesticks) {
-        if (candlesticks.empty()) return 0.0;
-        
-        double maxTemp = candlesticks[0].getHigh();
-        for (const auto& candle : candlesticks) {
             maxTemp = std::max(maxTemp, candle.getHigh());
         }
-        return maxTemp;
+        
+        return {minTemp, maxTemp};
     }
 
     void printSummary(const std::vector<Candlestick>& candlesticks) {
@@ -250,14 +249,16 @@ void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame ti
 
     DisplayStrategy strategy = determineDisplayStrategy(candlesticks, timeframe);
     
-    double minTemp = findMinTemperature(strategy.data);
-    double maxTemp = findMaxTemperature(strategy.data);
+    // FIXED: Use optimized single-pass temperature range finding
+    std::pair<double, double> tempRange = findTemperatureRange(strategy.data);
+    double minTemp = tempRange.first;
+    double maxTemp = tempRange.second;
     
     double range = maxTemp - minTemp;
     if (range <= 0) range = 1.0;
     
-    minTemp -= range * PADDING_RATIO;
-    maxTemp += range * PADDING_RATIO;
+    minTemp -= range * Constants::CHART_PADDING_RATIO;
+    maxTemp += range * Constants::CHART_PADDING_RATIO;
     range = maxTemp - minTemp;
     
     double tempPerRow = (chartHeight > 1) ? (range / (chartHeight - 1)) : 0;

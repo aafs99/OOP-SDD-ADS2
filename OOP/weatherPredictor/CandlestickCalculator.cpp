@@ -26,9 +26,6 @@ std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord
         groupedData[groupKey].push_back(record.temperature);
     }
 
-    double previousClose = 0.0;
-    bool isFirstPeriod = true;
-    
     for (const auto& group : groupedData) {
         const std::string& dateKey = group.first;
         const std::vector<double>& temperatures = group.second;
@@ -45,21 +42,15 @@ std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord
             if (temp < low) low = temp;
         }
         
-        double close = sum / temperatures.size();
-        double open;
+        double close = sum / temperatures.size();  // Average temperature for the period
         
-        if (isFirstPeriod) {
-            open = close;
-            isFirstPeriod = false;
-        } else {
-            open = previousClose;
-        }
+        // FIXED: Use first temperature reading as "open" for meteorological accuracy
+        // This makes more sense for temperature data than using previous period's average
+        double open = temperatures[0];  // First temperature reading of the period
         
         std::string candlestickDate = formatDateLabel(dateKey, timeframe);
         
         candlesticks.push_back(Candlestick(candlestickDate, open, close, high, low));
-        
-        previousClose = close;
     }
     
     printCandlestickTable(candlesticks);

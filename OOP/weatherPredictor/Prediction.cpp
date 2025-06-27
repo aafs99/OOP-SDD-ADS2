@@ -32,7 +32,7 @@ PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candl
     
     // Calculate slope and intercept using least squares method
     double denominator = n * sumX2 - sumX * sumX;
-    if (std::abs(denominator) < 1e-10) {
+    if (std::abs(denominator) < Constants::EPSILON) {
         // Degenerate case - return mean with low confidence
         double prediction = sumY / n;
         return PredictionResult(prediction, 0.0, modelName, 
@@ -245,7 +245,7 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
 
     // Chart header
     std::cout << "Period    Actual   Linear   MovAvg   Heuris  |  Visual Comparison\n";
-    std::cout << "          (°C)     (°C)     (°C)     (°C)    |  ●=Actual ▲=Linear ■=MovAvg ♦=Heuristic\n";
+    std::cout << "          (°C)     (°C)     (°C)     (°C)    |  o=Actual ^=Linear #=MovAvg +=Heuristic\n";
     std::cout << std::string(78, '-') << "\n";
 
     // Determine the range for scaling
@@ -259,7 +259,7 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
     
     // Add some padding
     double range = maxTemp - minTemp;
-    double padding = range * 0.1;
+    double padding = range * Constants::CHART_PADDING_RATIO;
     minTemp -= padding;
     maxTemp += padding;
 
@@ -312,31 +312,35 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
 
         std::cout << "  " << linearStr << "  " << movingStr << "  " << heuristicStr << "  |  ";
 
-        // Create visual representation
-        const int chartWidth = 20;
+        // Create visual representation with BOUNDS CHECKING
+        const int chartWidth = Constants::CHART_WIDTH;
         std::vector<char> chartLine(chartWidth, ' ');
         
-        // Calculate positions for each value
+        // Calculate positions for each value with bounds checking
         auto getPosition = [&](double value) -> int {
-            if (maxTemp == minTemp) return chartWidth / 2;
+            if (maxTemp <= minTemp) return chartWidth / 2;
             double normalized = (value - minTemp) / (maxTemp - minTemp);
-            return static_cast<int>(normalized * (chartWidth - 1));
+            int pos = static_cast<int>(normalized * (chartWidth - 1));
+            // CRITICAL FIX: Ensure bounds checking
+            return std::max(0, std::min(pos, chartWidth - 1));
         };
 
         int actualPos = getPosition(actualTemp);
-        chartLine[actualPos] = 'o';  // Actual temperature
+        if (actualPos >= 0 && actualPos < chartWidth) {
+            chartLine[actualPos] = 'o';  // Actual temperature
+        }
 
-        // Add predictions
+        // Add predictions with bounds checking
         if (i >= 2 && (i - 2) < linearPredictions.size() && linearPredictions[i - 2].isValid) {
             int linearPos = getPosition(linearPredictions[i - 2].predictionValue);
-            if (linearPos != actualPos && linearPos >= 0 && linearPos < chartWidth) {
+            if (linearPos >= 0 && linearPos < chartWidth && linearPos != actualPos) {
                 chartLine[linearPos] = '^';  // Linear prediction
             }
         }
         
         if (i >= 1 && (i - 1) < movingAvgPredictions.size() && movingAvgPredictions[i - 1].isValid) {
             int movingPos = getPosition(movingAvgPredictions[i - 1].predictionValue);
-            if (movingPos != actualPos && movingPos >= 0 && movingPos < chartWidth) {
+            if (movingPos >= 0 && movingPos < chartWidth && movingPos != actualPos) {
                 if (chartLine[movingPos] == ' ') {
                     chartLine[movingPos] = '#';  // Moving average prediction
                 } else {
@@ -347,7 +351,7 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
         
         if (i >= 2 && (i - 2) < heuristicPredictions.size() && heuristicPredictions[i - 2].isValid) {
             int heuristicPos = getPosition(heuristicPredictions[i - 2].predictionValue);
-            if (heuristicPos != actualPos && heuristicPos >= 0 && heuristicPos < chartWidth) {
+            if (heuristicPos >= 0 && heuristicPos < chartWidth && heuristicPos != actualPos) {
                 if (chartLine[heuristicPos] == ' ') {
                     chartLine[heuristicPos] = '+';  // Heuristic prediction
                 } else {
@@ -371,12 +375,12 @@ void Prediction::displayPredictionComparisonChart(const std::vector<Candlestick>
     for (int i = 0; i < 35; i++) std::cout << " ";
     std::cout << maxTemp - padding << "°C\n\n";
 
-    // Legend
+    // Updated legend (no color claims)
     std::cout << "LEGEND:\n";
-    std::cout << "  o = Actual Temperature (black in color version)\n";
-    std::cout << "  ^ = Linear Regression Prediction (blue in color version)\n";
-    std::cout << "  # = Moving Average Prediction (green in color version)\n";
-    std::cout << "  + = Heuristic Model Prediction (red in color version)\n";
+    std::cout << "  o = Actual Temperature\n";
+    std::cout << "  ^ = Linear Regression Prediction\n";
+    std::cout << "  # = Moving Average Prediction\n";
+    std::cout << "  + = Heuristic Model Prediction\n";
     std::cout << "  * = Multiple predictions at same position\n\n";
 
     // Calculate and display prediction accuracy statistics
@@ -488,9 +492,9 @@ void Prediction::displayEnhancedPredictionResults(const std::vector<Candlestick>
         std::cout << "   Result: " << std::fixed << std::setprecision(2) 
                   << linearResult.predictionValue << "°C\n";
         std::cout << "   Confidence: " << linearResult.confidenceDescription << "\n";
-        if (linearResult.confidenceMetric > 0.7) {
+        if (linearResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD) {
             std::cout << "   Assessment: ✓ HIGH confidence - Strong linear trend detected\n\n";
-        } else if (linearResult.confidenceMetric > 0.4) {
+        } else if (linearResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD) {
             std::cout << "   Assessment: ⚠ MODERATE confidence - Weak linear trend\n\n";
         } else {
             std::cout << "   Assessment: ⚠ LOW confidence - No clear linear trend\n\n";
@@ -508,9 +512,9 @@ void Prediction::displayEnhancedPredictionResults(const std::vector<Candlestick>
         std::cout << "   Result: " << std::fixed << std::setprecision(2) 
                   << movingAvgResult.predictionValue << "°C\n";
         std::cout << "   Confidence: " << movingAvgResult.confidenceDescription << "\n";
-        if (movingAvgResult.confidenceMetric > 0.7) {
+        if (movingAvgResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD) {
             std::cout << "   Assessment: ✓ HIGH stability - Low recent volatility\n\n";
-        } else if (movingAvgResult.confidenceMetric > 0.4) {
+        } else if (movingAvgResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD) {
             std::cout << "   Assessment: ⚠ MODERATE stability - Some volatility present\n\n";
         } else {
             std::cout << "   Assessment: ⚠ LOW stability - High recent volatility\n\n";
@@ -528,9 +532,9 @@ void Prediction::displayEnhancedPredictionResults(const std::vector<Candlestick>
         std::cout << "   Result: " << std::fixed << std::setprecision(2) 
                   << heuristicResult.predictionValue << "°C\n";
         std::cout << "   Confidence: " << heuristicResult.confidenceDescription << "\n";
-        if (heuristicResult.confidenceMetric > 0.7) {
+        if (heuristicResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD) {
             std::cout << "   Assessment: ✓ HIGH consistency - Reliable momentum trend\n\n";
-        } else if (heuristicResult.confidenceMetric > 0.4) {
+        } else if (heuristicResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD) {
             std::cout << "   Assessment: ⚠ MODERATE consistency - Some trend variability\n\n";
         } else {
             std::cout << "   Assessment: ⚠ LOW consistency - Highly variable trends\n\n";
@@ -548,8 +552,8 @@ void Prediction::displayEnhancedPredictionResults(const std::vector<Candlestick>
     std::cout << std::string(72, '-') << "\n";
     
     if (linearResult.isValid) {
-        std::string reliability = linearResult.confidenceMetric > 0.7 ? "High" :
-                                linearResult.confidenceMetric > 0.4 ? "Moderate" : "Low";
+        std::string reliability = linearResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD ? "High" :
+                                linearResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD ? "Moderate" : "Low";
         std::cout << std::left << std::setw(25) << "Linear Regression" 
                   << std::setw(12) << (std::to_string(linearResult.predictionValue).substr(0,5) + "°C")
                   << std::setw(15) << (std::to_string(linearResult.confidenceMetric).substr(0,5))
@@ -557,8 +561,8 @@ void Prediction::displayEnhancedPredictionResults(const std::vector<Candlestick>
     }
     
     if (movingAvgResult.isValid) {
-        std::string reliability = movingAvgResult.confidenceMetric > 0.7 ? "High" :
-                                movingAvgResult.confidenceMetric > 0.4 ? "Moderate" : "Low";
+        std::string reliability = movingAvgResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD ? "High" :
+                                movingAvgResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD ? "Moderate" : "Low";
         std::cout << std::left << std::setw(25) << "Moving Average (3)" 
                   << std::setw(12) << (std::to_string(movingAvgResult.predictionValue).substr(0,5) + "°C")
                   << std::setw(15) << (std::to_string(movingAvgResult.confidenceMetric).substr(0,5))
@@ -566,8 +570,8 @@ void Prediction::displayEnhancedPredictionResults(const std::vector<Candlestick>
     }
     
     if (heuristicResult.isValid) {
-        std::string reliability = heuristicResult.confidenceMetric > 0.7 ? "High" :
-                                heuristicResult.confidenceMetric > 0.4 ? "Moderate" : "Low";
+        std::string reliability = heuristicResult.confidenceMetric > Constants::HIGH_CONFIDENCE_THRESHOLD ? "High" :
+                                heuristicResult.confidenceMetric > Constants::MODERATE_CONFIDENCE_THRESHOLD ? "Moderate" : "Low";
         std::cout << std::left << std::setw(25) << "Heuristic (Momentum)" 
                   << std::setw(12) << (std::to_string(heuristicResult.predictionValue).substr(0,5) + "°C")
                   << std::setw(15) << (std::to_string(heuristicResult.confidenceMetric).substr(0,5))
@@ -713,7 +717,7 @@ double Prediction::calculateRSquaredDetailed(const std::vector<Candlestick>& dat
     }
     
     // Calculate R² = 1 - (residual SS / total SS)
-    if (totalSumSquares < 1e-10) return 0.0;  // Avoid division by zero
+    if (totalSumSquares < Constants::EPSILON) return 0.0;  // Avoid division by zero
     
     double rSquared = 1.0 - (residualSumSquares / totalSumSquares);
     return std::max(0.0, rSquared);  // Ensure non-negative
@@ -739,7 +743,7 @@ double Prediction::calculateStabilityConfidence(const std::vector<Candlestick>& 
     // Convert to stability confidence (inverse of relative volatility)
     // Higher volatility = lower confidence
     double relativeVolatility = (mean > 0) ? stdDev / std::abs(mean) : stdDev;
-    double stabilityConfidence = 1.0 / (1.0 + relativeVolatility * 5.0);  // Scale factor for reasonable range
+    double stabilityConfidence = 1.0 / (1.0 + relativeVolatility * Constants::STABILITY_SCALE_FACTOR);
     
     return std::min(1.0, std::max(0.0, stabilityConfidence));
 }

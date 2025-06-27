@@ -13,7 +13,7 @@
 #include "Prediction.h"
 
 namespace {
-    // Helper function to apply a chosen filter to a dataset
+    // FIXED: Modified to support cumulative filtering
     std::vector<Candlestick> applyFilter(
         const std::vector<Candlestick>& data, // The source data to filter
         FilterType filterType,
@@ -121,7 +121,7 @@ int main() {
                       << country << " (" << startYear << "-" << endYear << ") ====\n\n";
             Plotter::plotCandlesticks(candlesticks, timeframe, 20);
 
-            // --- Filtering Loop ---
+            // --- FIXED: Enhanced Filtering Loop with cumulative filtering option ---
             std::vector<Candlestick> dataForAnalysis = candlesticks;
             int filtersApplied = 0;
             
@@ -134,29 +134,85 @@ int main() {
                     double minTemp, maxTemp, minVolatility;
                     bool uptrend;
                     
-                    if (UserInput::getFilterCriteria(candlesticks, timeframe, filterType, 
-                                                   startDate, endDate, minTemp, maxTemp, 
-                                                   uptrend, minVolatility)) {
+                    // Show current filtering status
+                    if (filtersApplied > 0) {
+                        std::cout << "=== CURRENT STATUS ===\n";
+                        std::cout << "Filters applied: " << filtersApplied << "\n";
+                        std::cout << "Current dataset size: " << dataForAnalysis.size() << " candlesticks\n";
+                        std::cout << "Original dataset size: " << candlesticks.size() << " candlesticks\n\n";
                         
-                        UserInput::clearScreen();
+                        std::cout << "Choose filtering mode:\n";
+                        std::cout << "  1. Apply to current filtered data (cumulative)\n";
+                        std::cout << "  2. Apply to original data (fresh filter)\n";
                         
-                        std::vector<Candlestick> filtered = applyFilter(
-                            candlesticks, filterType, startDate, endDate, 
-                            minTemp, maxTemp, uptrend, minVolatility
-                        );
+                        int mode;
+                        while (true) {
+                            std::cout << "Enter mode (1-2): ";
+                            if (!(std::cin >> mode) || (mode != 1 && mode != 2)) {
+                                std::cout << "Error: Please enter 1 or 2.\n";
+                                UserInput::Internal::clearInputBuffer();
+                                continue;
+                            }
+                            break;
+                        }
                         
-                        if (!filtered.empty()) {
-                            dataForAnalysis = filtered;
-                            filtersApplied++;
+                        if (UserInput::getFilterCriteria(candlesticks, timeframe, filterType, 
+                                                       startDate, endDate, minTemp, maxTemp, 
+                                                       uptrend, minVolatility)) {
                             
-                            std::cout << "\n==== Filtered " << Utils::timeFrameToString(timeframe) 
-                                      << " Chart for " << country 
-                                      << " (Filter " << filtersApplied << " applied) ====\n";
-                            Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
+                            UserInput::clearScreen();
                             
-                        } else {
-                            std::cout << "\n⚠ Filter resulted in no data. Showing previous view.\n";
-                            Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
+                            std::vector<Candlestick> sourceData = (mode == 1) ? dataForAnalysis : candlesticks;
+                            std::vector<Candlestick> filtered = applyFilter(
+                                sourceData, filterType, startDate, endDate, 
+                                minTemp, maxTemp, uptrend, minVolatility
+                            );
+                            
+                            if (!filtered.empty()) {
+                                dataForAnalysis = filtered;
+                                if (mode == 2) {
+                                    filtersApplied = 1; // Reset counter for fresh filter
+                                } else {
+                                    filtersApplied++; // Increment for cumulative filter
+                                }
+                                
+                                std::cout << "\n==== Filtered " << Utils::timeFrameToString(timeframe) 
+                                          << " Chart for " << country << " ====\n";
+                                std::cout << "Mode: " << (mode == 1 ? "Cumulative" : "Fresh") 
+                                          << " filtering (Filter " << filtersApplied << " applied)\n\n";
+                                Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
+                                
+                            } else {
+                                std::cout << "\n⚠ Filter resulted in no data. Keeping previous dataset.\n";
+                                Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
+                            }
+                        }
+                    } else {
+                        // First filter - standard behavior
+                        if (UserInput::getFilterCriteria(candlesticks, timeframe, filterType, 
+                                                       startDate, endDate, minTemp, maxTemp, 
+                                                       uptrend, minVolatility)) {
+                            
+                            UserInput::clearScreen();
+                            
+                            std::vector<Candlestick> filtered = applyFilter(
+                                candlesticks, filterType, startDate, endDate, 
+                                minTemp, maxTemp, uptrend, minVolatility
+                            );
+                            
+                            if (!filtered.empty()) {
+                                dataForAnalysis = filtered;
+                                filtersApplied++;
+                                
+                                std::cout << "\n==== Filtered " << Utils::timeFrameToString(timeframe) 
+                                          << " Chart for " << country 
+                                          << " (Filter " << filtersApplied << " applied) ====\n";
+                                Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
+                                
+                            } else {
+                                std::cout << "\n⚠ Filter resulted in no data. Showing original view.\n";
+                                Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
+                            }
                         }
                     }
 
@@ -218,7 +274,7 @@ int main() {
     std::cout << std::string(60, '=') << "\n";
     std::cout << "\nKey Features Used:\n";
     std::cout << "✓ Historical temperature data visualization\n";
-    std::cout << "✓ Advanced data filtering capabilities\n";
+    std::cout << "✓ Advanced data filtering capabilities (cumulative & fresh modes)\n";
     std::cout << "✓ Task 4 temperature prediction models\n";
     std::cout << "✓ Multi-country comparative analysis\n";
     std::cout << "\nWe hope this tool helped you gain valuable insights\n";

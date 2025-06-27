@@ -61,7 +61,7 @@ std::vector<Candlestick> filterByTemperatureRange(const std::vector<Candlestick>
     size_t originalSize = data.size();
     
     for (const auto& candlestick : data) {
-        double avgTemp = candlestick.getAverage();
+        double avgTemp = candlestick.getMeanTemperature();
         if (avgTemp >= minTemp && avgTemp <= maxTemp) {
             filtered.push_back(candlestick);
         }
