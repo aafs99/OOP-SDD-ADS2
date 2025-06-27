@@ -7,6 +7,7 @@
 
 /*self written code start (code built with reference to : 
  https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
+ https://www.youtube.com/watch?v=lqeGdfprKn0&list=PLiPFKCVZWHKqk1TSSQTBcPSxZEjBT9E88&index=7
 */
 //! TDL Output looks messy, replace txt with ANSI codes for better readability
 void PredictionChart::displayVerticalChart(

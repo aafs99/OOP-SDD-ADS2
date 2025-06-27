@@ -7,6 +7,8 @@
 #include "Candlestick.h"
 #include "TemperatureRecord.h"
 
+
+//self written code start
 /**
  *  Main application controller that manages the analysis workflow
  * 
@@ -74,7 +76,8 @@ private:
                                  int startYear, int endYear);
 };
 
-#endif // APPLICATION_CONTROLLER_H#ifndef CANDLESTICK_H
+#endif // APPLICATION_CONTROLLER_H
+// self written code end#ifndef CANDLESTICK_H
 #define CANDLESTICK_H
 
 #include <string>
@@ -105,7 +108,7 @@ public:
     // 
     /**
      *  Gets the mean temperature for this period
-     * @return The average temperature (same as close value)
+     * @return The average temperature 
      * @note Inthe temperature candlestick model, 'close' represents 
      *       the calculated average temperature for the time period
      */
@@ -141,6 +144,9 @@ namespace CandlestickCalculator {
 #define COMMON_H
 
 #include <string>
+
+
+//self written code start
 
 // Centralized constants
 namespace Constants {
@@ -229,7 +235,8 @@ namespace Utils {
     }
 }
 
-#endif#ifndef DATA_FILTER_H
+#endif
+//self written code end#ifndef DATA_FILTER_H
 #define DATA_FILTER_H
 
 #include <vector>
@@ -282,7 +289,7 @@ namespace DataLoader {
 #define PLOT_CONFIGURATION_H
 
 #include <string>
-
+//self written code start
 struct PlotConfiguration {
     int candleWidth;
     int candleSpacing;
@@ -303,7 +310,8 @@ struct CompressionLevel {
     std::string description;
 };
 
-#endif#ifndef PLOTTER_H
+#endif
+//self written code start#ifndef PLOTTER_H
 #define PLOTTER_H
 
 #include <vector>
@@ -311,7 +319,7 @@ struct CompressionLevel {
 #include "Candlestick.h"
 #include "Common.h"
 #include "PlotConfiguration.h"
-
+//self written code start
 namespace Plotter {
     /**
      *  Plots a vector of Candlestick data to the console.
@@ -328,8 +336,8 @@ namespace Plotter {
         int chartHeight = 20
     );
 }
-
-#endif#ifndef PREDICTION_H
+#endif
+//self written code end#ifndef PREDICTION_H
 #define PREDICTION_H
 
 #include <vector>
@@ -339,6 +347,7 @@ namespace Plotter {
 #include "Candlestick.h"
 #include "Common.h"
 
+//self written code start
 /**
  * Structure to hold prediction results with confidence metrics
  */
@@ -442,7 +451,8 @@ double Prediction::calculateStandardDeviation(const Container& values, double me
     return std::sqrt(sumSquaredDiffs / (values.size() - 1));
 }
 
-#endif // PREDICTION_H#ifndef PREDICTION_CHART_H
+#endif // PREDICTION_H
+//self written code end#ifndef PREDICTION_CHART_H
 #define PREDICTION_CHART_H
 
 #include <vector>
@@ -452,6 +462,7 @@ double Prediction::calculateStandardDeviation(const Container& values, double me
 #include "Candlestick.h"
 #include "Common.h"
 
+//self written code start
 /**
  * Handles vertical chart display for prediction visualization
  */
@@ -515,7 +526,9 @@ double PredictionChart::calculateMean(const Container& values) noexcept {
     return sum / values.size();
 }
 
-#endif // PREDICTION_CHART_H#ifndef PREDICTION_DISPLAY_H
+#endif // PREDICTION_CHART_H
+
+//self written code start#ifndef PREDICTION_DISPLAY_H
 #define PREDICTION_DISPLAY_H
 
 #include <vector>
@@ -525,6 +538,7 @@ double PredictionChart::calculateMean(const Container& values) noexcept {
 #include "Candlestick.h"
 #include "Common.h"
 
+//self written code start
 /**
  * Handles all prediction display and formatting functionality
  */
@@ -553,7 +567,8 @@ private:
     static std::string formatDouble(double value, int precision = 2);
 };
 
-#endif // PREDICTION_DISPLAY_H#ifndef PREDICTION_VALIDATION_H
+#endif // PREDICTION_DISPLAY_H
+//self written code start#ifndef PREDICTION_VALIDATION_H
 #define PREDICTION_VALIDATION_H
 
 #include <vector>
@@ -562,8 +577,9 @@ private:
 #include "Prediction.h"
 #include "Candlestick.h"
 
+//self written code start
 /**
- * Structure to hold cross-validation results
+ * Hold cross-validation results
  */
 struct ValidationResult {
     double meanAbsoluteError{0.0};
@@ -628,7 +644,8 @@ double PredictionValidation::calculateMean(const Container& values) noexcept {
     return sum / values.size();
 }
 
-#endif // PREDICTION_VALIDATION_H#ifndef TEMPERATURE_RECORD_H
+#endif // PREDICTION_VALIDATION_H
+//self written code end#ifndef TEMPERATURE_RECORD_H
 #define TEMPERATURE_RECORD_H
 
 #include <string>
@@ -648,6 +665,7 @@ struct TemperatureRecord {
 #include <vector>
 #include "Common.h"
 
+// self written code start
 class Candlestick;
 
 namespace UserInput {
@@ -712,7 +730,8 @@ namespace UserInput {
     }
 }
 
-#endif#include "ApplicationController.h"
+#endif
+// self written code end#include "ApplicationController.h"
 #include "DataLoader.h"
 #include "CandlestickCalculator.h"
 #include "Plotter.h"
@@ -722,6 +741,7 @@ namespace UserInput {
 #include <iostream>
 #include <exception>
 
+//self written code start
 ApplicationController::ApplicationController(const std::string& dataFilePath) 
     : dataFilePath_(dataFilePath) {
 }
@@ -1082,7 +1102,9 @@ void ApplicationController::displayPredictions(const std::vector<Candlestick>& d
     config.showChart = (data.size() >= 4);
     
     Prediction::displayPredictionResults(data, timeframe, country, startYear, endYear, config);
-}#include "Candlestick.h"
+}
+
+//self written code end#include "Candlestick.h"
 
 Candlestick::Candlestick() : date_(""), open_(0), close_(0), high_(0), low_(0) {}
 
@@ -1093,6 +1115,11 @@ Candlestick::Candlestick(const std::string& date, double open, double close, dou
 #include <map>
 #include <iostream>
 #include <iomanip>
+
+/*self written code start (code built with reference to : 
+ https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
+ https://github.com/VivekThazhathattil/candlesticks-SFML
+*/
 
 namespace CandlestickCalculator {
 
@@ -1262,16 +1289,21 @@ void printCandlestickTable(const std::vector<Candlestick>& candlesticks) {
     std::cout << "\n";
 }
 
-} // namespace CandlestickCalculator#include "DataFilter.h"
+} // namespace CandlestickCalculator
+// self written code end#include "DataFilter.h"
 #include "Common.h"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
 
+/*self written code start (code built with reference to : 
+ * https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
+ * https://github.com/AriaFallah/csv-parser
+*/
 namespace DataFilter {
 
 namespace {
-    // Helper function to reduce code duplication for input validation
+    // Helper function for input validation
     bool validateFilterInput(const std::vector<Candlestick>& data, const std::string& filterType) {
         if (data.empty()) {
             std::cout << "Warning: No data provided for " << filterType << " filtering.\n";
@@ -1290,7 +1322,8 @@ namespace {
         }
     }
     
-    // Template function to reduce duplication in filter implementations
+    //Applies a filter based on a predicate function
+    // and handles the results, including printing stats and warnings.
     template<typename PredicateFunc>
     std::vector<Candlestick> applyFilter(const std::vector<Candlestick>& data, 
                                         const std::string& filterType,
@@ -1317,6 +1350,7 @@ namespace {
     }
 }
 
+//self written code start
 std::vector<Candlestick> filterByDateRange(const std::vector<Candlestick>& data, 
                                           const std::string& startDate, const std::string& endDate) {
     std::vector<Candlestick> filtered;
@@ -1417,12 +1451,19 @@ void printFilterStats(size_t original, size_t filtered, const std::string& filte
     std::cout << "\n";
 }
 
-} // namespace DataFilter#include "DataLoader.h"
+} // namespace DataFilter
+//self written code end#include "DataLoader.h"
 #include "Common.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
 
+/*self written code start (code built with reference to : 
+ https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
+ https://github.com/AriaFallah/csv-parser
+ https://github.com/tdulcet/Table-and-Graph-Libs
+ https://www.youtube.com/watch?v=Ox7qVlfNYNE&list=PLiPFKCVZWHKqk1TSSQTBcPSxZEjBT9E88&index=6
+*/
 namespace DataLoader {
 
 std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::string& countryCode, 
@@ -1584,8 +1625,9 @@ std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::s
     return data;
 }
 
-} // namespace DataLoader#include "PlotConfiguration.h"
-
+} // namespace DataLoader
+//self written code end#include "PlotConfiguration.h"
+//self written code start
 PlotConfiguration::PlotConfiguration(int width, int spacing) 
     : candleWidth(width), candleSpacing(spacing) {
     update();
@@ -1603,7 +1645,8 @@ void PlotConfiguration::update() {
     } else {
         wickShape = "|";
     }
-}#include "Plotter.h"
+}
+//self written code end#include "Plotter.h"
 #include "PlotConfiguration.h"
 #include "Common.h"
 #include <iostream>
@@ -1612,6 +1655,12 @@ void PlotConfiguration::update() {
 #include <algorithm>
 #include <cmath>
 
+
+/*self written code start (code built with reference to : 
+ https://github.com/AriaFallah/csv-parser
+ https://github.com/tdulcet/Table-and-Graph-Libs
+ https://github.com/tdulcet/Table-and-Graph-Libs
+*/
 namespace {
     // ANSI color codes
     const std::string ANSI_COLOR_GREEN = "\033[32m";
@@ -1860,7 +1909,7 @@ namespace {
         std::cout << "  Down-Trends:   " << downCount << " (" << std::fixed << std::setprecision(1) << (100.0 - upPercent) << "%)\n\n";
     }
 
-} // anonymous namespace
+} 
 
 namespace Plotter {
 
@@ -1905,7 +1954,8 @@ void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame ti
     printSummary(strategy.data);
 }
 
-} // namespace Plotter#include "Prediction.h"
+} // namespace Plotter
+//self written code end#include "Prediction.h"
 #include "PredictionDisplay.h"
 #include "Common.h"
 #include <cmath>
@@ -1914,7 +1964,11 @@ void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame ti
 #include <sstream>
 #include <iomanip>
 
-// Core prediction algorithms
+// Core prediction algorithm
+/*self written code start (code built with reference to : 
+    https://github.com/NumericalMax/Linear-Regression)
+    https://www.geeksforgeeks.org/regression-analysis-and-the-best-fitting-line-using-c/
+*/
 
 PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candlestick>& data) {
     const std::string modelName = "Linear Regression";
@@ -1962,7 +2016,11 @@ PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candl
     
     return PredictionResult(prediction, rSquared, modelName, confDesc.str());
 }
+// self written code end
 
+/*self written code start (code built with reference to : 
+    https://www.youtube.com/watch?v=6vH3NFcpr3w
+*/
 PredictionResult Prediction::predictMovingAverageWithConfidence(
     const std::vector<Candlestick>& data, int windowSize) {
     
@@ -2000,7 +2058,11 @@ PredictionResult Prediction::predictMovingAverageWithConfidence(
     
     return PredictionResult(prediction, stabilityConfidence, modelName, confDesc.str());
 }
+//self written code end
 
+/*self written code start (code built with reference to :
+    *https://github.com/MisaghMomeniB/Stock-Momentum-Analysis
+*/
 PredictionResult Prediction::predictHeuristicWithConfidence(const std::vector<Candlestick>& data) {
     const std::string modelName = "Heuristic (Momentum)";
     std::string errorMessage;
@@ -2039,9 +2101,10 @@ void Prediction::displayPredictionResults(
     
     PredictionDisplay::displayEnhancedResults(data, timeframe, country, startYear, endYear, config);
 }
+// self written code end
 
+//self written code start
 // Private helper methods
-
 double Prediction::calculateRSquaredDetailed(
     const std::vector<Candlestick>& data, 
     double slope, double intercept) noexcept {
@@ -2117,6 +2180,7 @@ double Prediction::calculateConsistencyConfidence(const std::vector<Candlestick>
     
     return std::max(0.0, std::min(consistencyConfidence, 1.0));
 }
+// self written code end
 
 bool Prediction::validateDataSize(
     const std::vector<Candlestick>& data, 
@@ -2162,6 +2226,7 @@ std::string Prediction::getConfidenceLevel(double confidence) noexcept {
     }
 }
 
+//self written code start
 std::string Prediction::determineNextPeriod(
     const std::vector<Candlestick>& data, 
     TimeFrame timeframe, int endYear) {
@@ -2195,13 +2260,19 @@ std::string Prediction::determineNextPeriod(
         default:
             return "Next period";
     }
-}#include "PredictionChart.h"
+}
+// self written code end#include "PredictionChart.h"
 #include "Prediction.h"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
 #include <sstream>
 
+/*self written code start (code built with reference to : 
+ https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
+ https://www.youtube.com/watch?v=lqeGdfprKn0&list=PLiPFKCVZWHKqk1TSSQTBcPSxZEjBT9E88&index=7
+*/
+//! TDL Output looks messy, replace txt with ANSI codes for better readability
 void PredictionChart::displayVerticalChart(
     const std::vector<Candlestick>& data,
     TimeFrame timeframe,
@@ -2523,7 +2594,8 @@ std::string PredictionChart::formatDouble(double value, int precision) {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(precision) << value;
     return oss.str();
-}#include "PredictionDisplay.h"
+}
+// self written code end#include "PredictionDisplay.h"
 #include "PredictionValidation.h"
 #include "PredictionChart.h"
 #include "Prediction.h"
@@ -2532,6 +2604,7 @@ std::string PredictionChart::formatDouble(double value, int precision) {
 #include <algorithm>
 #include <sstream>
 
+//self written code start
 void PredictionDisplay::displayEnhancedResults(
     const std::vector<Candlestick>& data,
     TimeFrame timeframe,
@@ -2684,7 +2757,8 @@ std::string PredictionDisplay::formatDouble(double value, int precision) {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(precision) << value;
     return oss.str();
-}#include "PredictionValidation.h"
+}
+// self written code end#include "PredictionValidation.h"
 #include "Prediction.h"
 #include "Common.h"
 #include <iostream>
@@ -2693,6 +2767,7 @@ std::string PredictionDisplay::formatDouble(double value, int precision) {
 #include <limits>
 #include <sstream>
 
+//self written code start
 ValidationResult PredictionValidation::validateModel(
     const std::vector<Candlestick>& data,
     const PredictionFunction& modelFunction,
@@ -2832,7 +2907,8 @@ std::string PredictionValidation::formatDouble(double value, int precision) {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(precision) << value;
     return oss.str();
-}#include "UserInput.h"
+}
+// self written code end#include "UserInput.h"
 #include "Common.h"
 #include "Candlestick.h"
 #include <iostream>
@@ -2846,6 +2922,7 @@ std::string PredictionValidation::formatDouble(double value, int precision) {
 #include <fstream>
 #include <ctime>
 
+//self written code start
 #ifdef _WIN32
     #include <windows.h>
     #include <cstdlib>
@@ -2869,7 +2946,7 @@ namespace {
         {"SK", "Slovakia"}
     };
     
-    // Helper function to reduce code duplication for y/n input validation
+    // Helper function for y/n input validation
     bool getYesNoInput(const std::string& prompt) {
         std::string choice;
         std::cout << prompt;
@@ -3052,7 +3129,7 @@ TimeFrame getTimeFrame() {
     }
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to apply a filter to the data.
 bool askForFiltering() {
     std::cout << "\n=== Data Filtering ===\n";
     std::cout << "Filtering allows you to focus your analysis on specific aspects of the data:\n";
@@ -3064,7 +3141,7 @@ bool askForFiltering() {
     return getYesNoInput("\nWould you like to apply a filter to the data? (y/n): ");
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to generate advanced temperature predictions.
 bool askForPredictions() {
     std::cout << "\n=== Temperature Predictions ===\n";
     std::cout << "Generate advanced temperature forecasts with confidence metrics:\n";
@@ -3077,7 +3154,7 @@ bool askForPredictions() {
     return getYesNoInput("\nWould you like to generate enhanced temperature predictions? (y/n): ");
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to continue with a specific operation.
 bool askToContinue(const std::string& operation) {
     return getYesNoInput("\nWould you like to " + operation + "? (y/n): ");
 }
@@ -3179,7 +3256,7 @@ void waitForUser() {
     std::cin.get();
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to generate a prediction comparison chart.
 bool askForPredictionChart() {
     std::cout << "\n=== PREDICTION COMPARISON CHART ===\n";
     std::cout << "Generate a visual chart comparing actual temperatures with predictions\n";
@@ -3193,7 +3270,7 @@ bool askForPredictionChart() {
     return getYesNoInput("\nWould you like to generate the prediction comparison chart? (y/n): ");
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to analyze another country.
 bool askToAnalyzeAnotherCountry() {
     std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "Analysis Complete!\n";
@@ -3371,13 +3448,15 @@ void clearInputBuffer() {
     std::cin.clear();
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
-} // namespace UserInput
-} #include <iostream>
+} 
+} 
+//self written code  end#include <iostream>
 #include <string>
 #include "ApplicationController.h"
 
+
+//self written code start
 /**
- * Temperature Analysis Tool
  * 
  * This program provides a command-line interface for analyzing historical
  * temperature data from European countries (1980-2019). It supports:
@@ -3410,3 +3489,5 @@ int main() {
         return 2;
     }
 }
+
+//self written code end

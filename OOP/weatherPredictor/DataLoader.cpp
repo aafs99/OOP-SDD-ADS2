@@ -8,7 +8,7 @@
  https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
  https://github.com/AriaFallah/csv-parser
  https://github.com/tdulcet/Table-and-Graph-Libs
- https://github.com/tdulcet/Table-and-Graph-Libs
+ https://www.youtube.com/watch?v=Ox7qVlfNYNE&list=PLiPFKCVZWHKqk1TSSQTBcPSxZEjBT9E88&index=6
 */
 namespace DataLoader {
 
