@@ -321,9 +321,9 @@ bool askForPredictionChart() {
 bool askToAnalyzeAnotherCountry() {
     std::string choice;
     
-    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "Analysis Complete!\n";
-    std::cout << std::string(60, '=') << "\n";
+    std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "\nWould you like to analyze another country? (y/n): ";
     
     while (true) {

@@ -8,10 +8,6 @@
 #include <cmath>
 
 namespace {
-    // Chart display constants
-    const int Y_AXIS_WIDTH = 8;
-    const int MAX_CHART_WIDTH = 120;
-
     // ANSI color codes
     const std::string ANSI_COLOR_GREEN = "\033[32m";
     const std::string ANSI_COLOR_RED = "\033[31m";
@@ -26,11 +22,6 @@ namespace {
         {1, 0, "Ultra Dense"}
     };
     const int NUM_COMPRESSION_LEVELS = sizeof(COMPRESSION_LEVELS) / sizeof(COMPRESSION_LEVELS[0]);
-
-    // Display strategy thresholds
-    const size_t PREFERRED_MAX_DISPLAY_POINTS = 60;
-    const size_t MODERATE_MAX_DISPLAY_POINTS = 100;
-    const size_t ABSOLUTE_MAX_DISPLAY_POINTS = 120;
 
     struct DisplayStrategy {
         std::vector<Candlestick> data;
@@ -64,11 +55,11 @@ namespace {
         int startCompressionLevel = 0;
         
         // Determine if sampling or aggressive compression is needed based on data volume
-        if (dataSize > MODERATE_MAX_DISPLAY_POINTS) {
-            targetSize = ABSOLUTE_MAX_DISPLAY_POINTS;
+        if (dataSize > Constants::MODERATE_MAX_DISPLAY_POINTS) {
+            targetSize = Constants::ABSOLUTE_MAX_DISPLAY_POINTS;
             strategy.wasSampled = true;
             startCompressionLevel = 2; // Start with "Dense" for large datasets
-        } else if (dataSize > PREFERRED_MAX_DISPLAY_POINTS) {
+        } else if (dataSize > Constants::PREFERRED_MAX_DISPLAY_POINTS) {
             startCompressionLevel = 1; // Start with "Compact" for medium datasets
         }
         
@@ -91,8 +82,8 @@ namespace {
         for (int i = startCompressionLevel; i < NUM_COMPRESSION_LEVELS; ++i) {
             finalCompressionLevel = i;
             const auto& level = COMPRESSION_LEVELS[i];
-            int requiredWidth = dataSize * (level.candleWidth + level.candleSpacing) + Y_AXIS_WIDTH;
-            if (requiredWidth <= MAX_CHART_WIDTH) {
+            int requiredWidth = dataSize * (level.candleWidth + level.candleSpacing) + Constants::Y_AXIS_WIDTH;
+            if (requiredWidth <= Constants::MAX_CHART_WIDTH) {
                 break; // This level fits
             }
         }
@@ -112,17 +103,16 @@ namespace {
     void printXAxisLabels(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe, const PlotConfiguration& config) {
         const int candleCharacterWidth = config.candleWidth + config.candleSpacing;
         if (candlesticks.empty() || candleCharacterWidth == 0) {
-            std::cout << std::string(Y_AXIS_WIDTH, '-') << "\n\n";
+            std::cout << std::string(Constants::Y_AXIS_WIDTH, '-') << "\n\n";
             return;
         }
 
         const int totalChartWidth = candlesticks.size() * candleCharacterWidth;
-        std::cout << std::string(Y_AXIS_WIDTH, '-') << std::string(totalChartWidth, '-') << "\n";
-        std::cout << std::string(Y_AXIS_WIDTH, ' ');
+        std::cout << std::string(Constants::Y_AXIS_WIDTH, '-') << std::string(totalChartWidth, '-') << "\n";
+        std::cout << std::string(Constants::Y_AXIS_WIDTH, ' ');
 
         // Calculate a reasonable number of labels to display to avoid clutter
-        const int minCharsPerLabel = 6; // e.g., "Jan'25"
-        int maxLabels = totalChartWidth / minCharsPerLabel;
+        int maxLabels = totalChartWidth / Constants::MIN_CHARS_PER_LABEL;
         maxLabels = std::max(2, maxLabels); // Ensure at least 2 labels (start and end)
         
         const int labelInterval = std::max(1, static_cast<int>(candlesticks.size() -1) / (maxLabels -1));
@@ -266,7 +256,7 @@ void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame ti
     for (int row = 0; row < chartHeight; ++row) {
         double currentTemp = maxTemp - (row * tempPerRow);
         
-        std::cout << std::right << std::setw(Y_AXIS_WIDTH - 2) 
+        std::cout << std::right << std::setw(Constants::Y_AXIS_WIDTH - 2) 
                   << std::fixed << std::setprecision(1) << currentTemp << "| ";
         
         for (const auto& candle : strategy.data) {

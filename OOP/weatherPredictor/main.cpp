@@ -269,9 +269,9 @@ int main() {
     
     // Farewell message
     UserInput::clearScreen();
-    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "   THANK YOU FOR USING THE TEMPERATURE ANALYSIS TOOL!\n";
-    std::cout << std::string(60, '=') << "\n";
+    std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "\nKey Features Used:\n";
     std::cout << "✓ Historical temperature data visualization\n";
     std::cout << "✓ Advanced data filtering capabilities (cumulative & fresh modes)\n";

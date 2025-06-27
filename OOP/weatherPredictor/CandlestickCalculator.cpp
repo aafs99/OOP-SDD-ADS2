@@ -131,24 +131,24 @@ void printCandlestickTable(const std::vector<Candlestick>& candlesticks) {
     
     // Table Header
     std::cout << "\n=== Candlestick Data Table ===\n";
-    std::cout << std::left << std::setw(12) << "Date"
-              << "| " << std::setw(8) << "Open"
-              << "| " << std::setw(8) << "Close"
-              << "| " << std::setw(8) << "High"
-              << "| " << std::setw(8) << "Low"
-              << "| " << std::setw(6) << "Change" << "\n";
-    std::cout << std::string(60, '-') << "\n";
+    std::cout << std::left << std::setw(Constants::DATE_COLUMN_WIDTH) << "Date"
+              << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << "Open"
+              << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << "Close"
+              << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << "High"
+              << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << "Low"
+              << "| " << std::setw(Constants::CHANGE_COLUMN_WIDTH) << "Change" << "\n";
+    std::cout << std::string(Constants::TABLE_SEPARATOR_WIDTH, '-') << "\n";
     
     // Table Body
     for (const auto& candle : candlesticks) {
         std::string change = candle.isUptrend() ? "UP" : "DOWN";
         
-        std::cout << std::left << std::setw(12) << candle.getDate()
-                  << "| " << std::setw(8) << std::fixed << std::setprecision(2) << candle.getOpen()
-                  << "| " << std::setw(8) << std::fixed << std::setprecision(2) << candle.getClose()
-                  << "| " << std::setw(8) << std::fixed << std::setprecision(2) << candle.getHigh()
-                  << "| " << std::setw(8) << std::fixed << std::setprecision(2) << candle.getLow()
-                  << "| " << std::setw(6) << change << "\n";
+        std::cout << std::left << std::setw(Constants::DATE_COLUMN_WIDTH) << candle.getDate()
+                  << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << std::fixed << std::setprecision(2) << candle.getOpen()
+                  << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << std::fixed << std::setprecision(2) << candle.getClose()
+                  << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << std::fixed << std::setprecision(2) << candle.getHigh()
+                  << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << std::fixed << std::setprecision(2) << candle.getLow()
+                  << "| " << std::setw(Constants::CHANGE_COLUMN_WIDTH) << change << "\n";
     }
     std::cout << "\n";
 }

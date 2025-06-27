@@ -340,7 +340,7 @@ void Prediction::displayRecommendation(const std::vector<PredictionResult>& resu
     std::cout << std::string(40, '-') << "\n";
     
     if (bestResult != results.end() && bestResult->isValid && bestResult->confidenceMetric > 0.0) {
-        std::cout << "🎯 RECOMMENDED: " << bestResult->modelName << "\n";
+        std::cout << "   RECOMMENDED: " << bestResult->modelName << "\n";
         std::cout << "   Confidence: " << formatConfidence(bestResult->confidenceMetric) << "\n";
         std::cout << "   Reason: Highest confidence metric among available models\n";
     } else {
@@ -361,9 +361,9 @@ void Prediction::displayPredictionComparisonChart(
         return;
     }
 
-    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "PREDICTION COMPARISON CHART\n";
-    std::cout << std::string(60, '=') << "\n";
+    std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "Visual comparison for " << country << " (" << startYear << "-" << endYear << ")\n\n";
 
     // Generate all rolling predictions
@@ -399,7 +399,7 @@ std::vector<std::vector<PredictionResult>> Prediction::generateAllRollingPredict
 void Prediction::displayChartHeader() {
     std::cout << "Period    Actual   Linear   MovAvg   Heuris  |  Visual Comparison\n";
     std::cout << "          (°C)     (°C)     (°C)     (°C)    |  o=Actual ^=Linear #=MovAvg +=Heuristic\n";
-    std::cout << std::string(78, '-') << "\n";
+    std::cout << std::string(Constants::CHART_HEADER_WIDTH_78, '-') << "\n";
 }
 
 void Prediction::displayChartLegend() {
@@ -557,7 +557,7 @@ void Prediction::displayChartFooter(
     double range = maxTemp - minTemp;
     double padding = range * PredictionConfig::CHART_PADDING_RATIO;
     
-    std::cout << std::string(78, '-') << "\n";
+    std::cout << std::string(Constants::CHART_HEADER_WIDTH_78, '-') << "\n";
     std::cout << "Temperature Scale: ";
     std::cout << std::fixed << std::setprecision(1) << (minTemp + padding) << "°C";
     for (int i = 0; i < 35; i++) std::cout << " ";
@@ -612,7 +612,7 @@ void Prediction::displayAccuracyAnalysis(
               << std::setw(15) << "Avg Error (°C)" 
               << std::setw(15) << "Max Error (°C)"
               << std::setw(15) << "Predictions" << "\n";
-    std::cout << std::string(65, '-') << "\n";
+    std::cout << std::string(Constants::ANALYSIS_SEPARATOR_WIDTH_65, '-') << "\n";
     
     const std::vector<std::string> modelNames = {"Linear Regression", "Moving Average", "Heuristic Model"};
     
@@ -762,7 +762,7 @@ void Prediction::displayValidationResults(const std::vector<ValidationResult>& r
               << std::setw(12) << "RMSE (°C)"
               << std::setw(12) << "Max Error"
               << std::setw(15) << "Success Rate" << "\n";
-    std::cout << std::string(71, '-') << "\n";
+    std::cout << std::string(Constants::VALIDATION_SEPARATOR_WIDTH_71, '-') << "\n";
     
     for (size_t i = 0; i < results.size() && i < modelNames.size(); i++) {
         const ValidationResult& result = results[i];
@@ -917,7 +917,7 @@ std::string Prediction::determineNextPeriod(
         case TimeFrame::Monthly:
             if (lastDate.length() >= 7) {
                 const int year = std::stoi(lastDate.substr(0, 4));
-                const int month = std::stoi(lastDate.substr(5, 2));
+                const int month = std::stoi(lastDate.substr(Constants::NUMBER_FORMAT_PRECISION, 2));
                 
                 if (month == 12) {
                     std::ostringstream oss;
