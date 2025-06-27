@@ -32,6 +32,23 @@ namespace {
         {"RO", "Romania"}, {"SE", "Sweden"}, {"SI", "Slovenia"},
         {"SK", "Slovakia"}
     };
+    
+    // FIXED: Helper function to reduce code duplication for y/n input validation
+    bool getYesNoInput(const std::string& prompt) {
+        std::string choice;
+        std::cout << prompt;
+        
+        while (true) {
+            std::cin >> choice;
+            std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
+            
+            if (choice == "y" || choice == "yes") return true;
+            if (choice == "n" || choice == "no") return false;
+            
+            std::cout << "Please enter 'y' for yes or 'n' for no: ";
+            UserInput::Internal::clearInputBuffer();
+        }
+    }
 }
 
 namespace UserInput {
@@ -132,32 +149,20 @@ TimeFrame getTimeFrame() {
     }
 }
 
+// FIXED: Use helper function to reduce code duplication
 bool askForFiltering() {
-    std::string choice;
-    
     std::cout << "\n=== Data Filtering ===\n";
     std::cout << "Filtering allows you to focus your analysis on specific aspects of the data:\n";
     std::cout << "  • Date Range: Analyze specific time periods\n";
     std::cout << "  • Temperature Range: Focus on periods with certain temperature levels\n";
     std::cout << "  • Trend Direction: Analyze only warming or cooling periods\n";
     std::cout << "  • Volatility: Focus on periods with high temperature variation\n";
-    std::cout << "\nWould you like to apply a filter to the data? (y/n): ";
     
-    while (true) {
-        std::cin >> choice;
-        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
-        
-        if (choice == "y" || choice == "yes") return true;
-        if (choice == "n" || choice == "no") return false;
-        
-        std::cout << "Please enter 'y' for yes or 'n' for no: ";
-        Internal::clearInputBuffer();
-    }
+    return getYesNoInput("\nWould you like to apply a filter to the data? (y/n): ");
 }
 
+// FIXED: Use helper function to reduce code duplication
 bool askForPredictions() {
-    std::string choice;
-    
     std::cout << "\n=== ENHANCED TASK 4: Temperature Predictions ===\n";
     std::cout << "Generate advanced temperature forecasts with confidence metrics:\n";
     std::cout << "  • Linear Regression: R² confidence metric (trend strength)\n";
@@ -165,35 +170,13 @@ bool askForPredictions() {
     std::cout << "  • Momentum Model: Consistency confidence (trend reliability)\n";
     std::cout << "  • Cross-Validation: Model accuracy assessment (if sufficient data)\n";
     std::cout << "  • Prediction Charts: Visual comparison of actual vs predicted (Figure 4 style)\n";
-    std::cout << "\nWould you like to generate enhanced temperature predictions? (y/n): ";
     
-    while (true) {
-        std::cin >> choice;
-        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
-        
-        if (choice == "y" || choice == "yes") return true;
-        if (choice == "n" || choice == "no") return false;
-        
-        std::cout << "Please enter 'y' for yes or 'n' for no: ";
-        Internal::clearInputBuffer();
-    }
+    return getYesNoInput("\nWould you like to generate enhanced temperature predictions? (y/n): ");
 }
 
+// FIXED: Use helper function to reduce code duplication
 bool askToContinue(const std::string& operation) {
-    std::string choice;
-    
-    std::cout << "\nWould you like to " << operation << "? (y/n): ";
-    
-    while (true) {
-        std::cin >> choice;
-        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
-        
-        if (choice == "y" || choice == "yes") return true;
-        if (choice == "n" || choice == "no") return false;
-        
-        std::cout << "Please enter 'y' for yes or 'n' for no: ";
-        Internal::clearInputBuffer();
-    }
+    return getYesNoInput("\nWould you like to " + operation + "? (y/n): ");
 }
 
 bool getFilterCriteria(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe,
@@ -293,9 +276,8 @@ void waitForUser() {
     std::cin.get();
 }
 
+// FIXED: Use helper function to reduce code duplication
 bool askForPredictionChart() {
-    std::string choice;
-    
     std::cout << "\n=== PREDICTION COMPARISON CHART ===\n";
     std::cout << "Generate a visual chart comparing actual temperatures with predictions\n";
     std::cout << "from all three models across the historical period.\n";
@@ -304,43 +286,21 @@ bool askForPredictionChart() {
     std::cout << "• Linear model predictions (^)\n";
     std::cout << "• Moving average predictions (#)\n";
     std::cout << "• Heuristic model predictions (+)\n";
-    std::cout << "\nWould you like to generate the prediction comparison chart? (y/n): ";
     
-    while (true) {
-        std::cin >> choice;
-        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
-        
-        if (choice == "y" || choice == "yes") return true;
-        if (choice == "n" || choice == "no") return false;
-        
-        std::cout << "Please enter 'y' for yes or 'n' for no: ";
-        Internal::clearInputBuffer();
-    }
+    return getYesNoInput("\nWould you like to generate the prediction comparison chart? (y/n): ");
 }
 
+// FIXED: Use helper function to reduce code duplication
 bool askToAnalyzeAnotherCountry() {
-    std::string choice;
-    
     std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "Analysis Complete!\n";
     std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
-    std::cout << "\nWould you like to analyze another country? (y/n): ";
     
-    while (true) {
-        std::cin >> choice;
-        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
-        
-        if (choice == "y" || choice == "yes") {
-            clearScreen();
-            return true;
-        }
-        if (choice == "n" || choice == "no") {
-            return false;
-        }
-        
-        std::cout << "Please enter 'y' for yes or 'n' for no: ";
-        Internal::clearInputBuffer();
+    bool result = getYesNoInput("\nWould you like to analyze another country? (y/n): ");
+    if (result) {
+        clearScreen();
     }
+    return result;
 }
 
 

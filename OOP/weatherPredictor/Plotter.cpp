@@ -23,12 +23,19 @@ namespace {
     };
     const int NUM_COMPRESSION_LEVELS = sizeof(COMPRESSION_LEVELS) / sizeof(COMPRESSION_LEVELS[0]);
 
+    // FIXED: Use reference to avoid copying data unless necessary
     struct DisplayStrategy {
         std::vector<Candlestick> data;
         PlotConfiguration config;
         bool wasSampled;
         bool wasCompressed;
         std::string compressionLevel;
+        
+        // FIXED: Move constructor to avoid unnecessary copies
+        DisplayStrategy(std::vector<Candlestick>&& candlesticks) 
+            : data(std::move(candlesticks)), wasSampled(false), wasCompressed(false), compressionLevel("Standard") {}
+        
+        DisplayStrategy() : wasSampled(false), wasCompressed(false), compressionLevel("Standard") {}
     };
 
     // Forward declarations for helper functions
@@ -39,13 +46,8 @@ namespace {
      * @brief Determines the optimal display strategy combining sampling and compression.
      */
     DisplayStrategy determineDisplayStrategy(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe) {
-        DisplayStrategy strategy;
-        strategy.data = candlesticks;
-        strategy.wasSampled = false;
-        strategy.wasCompressed = false;
-        strategy.compressionLevel = "Standard";
-        
         if (candlesticks.empty()) {
+            DisplayStrategy strategy;
             strategy.config = PlotConfiguration(5, 2);
             return strategy;
         }
@@ -53,48 +55,76 @@ namespace {
         size_t dataSize = candlesticks.size();
         size_t targetSize = dataSize;
         int startCompressionLevel = 0;
+        bool needsSampling = false;
         
         // Determine if sampling or aggressive compression is needed based on data volume
         if (dataSize > Constants::MODERATE_MAX_DISPLAY_POINTS) {
             targetSize = Constants::ABSOLUTE_MAX_DISPLAY_POINTS;
-            strategy.wasSampled = true;
+            needsSampling = true;
             startCompressionLevel = 2; // Start with "Dense" for large datasets
         } else if (dataSize > Constants::PREFERRED_MAX_DISPLAY_POINTS) {
             startCompressionLevel = 1; // Start with "Compact" for medium datasets
         }
         
-        //  Apply sampling if needed
-        if (strategy.wasSampled) {
+        // FIXED: Only create strategy with data copy if sampling is needed
+        if (needsSampling) {
             std::vector<Candlestick> sampled;
-            if (dataSize > 0) {
-                 sampled.reserve(targetSize);
-                for (size_t i = 0; i < targetSize; ++i) {
-                    size_t index = (i * (dataSize - 1)) / (targetSize - 1);
-                    sampled.push_back(candlesticks[index]);
+            sampled.reserve(targetSize);
+            
+            for (size_t i = 0; i < targetSize; ++i) {
+                size_t index = (i * (dataSize - 1)) / (targetSize - 1);
+                sampled.emplace_back(candlesticks[index]);
+            }
+            
+            DisplayStrategy strategy(std::move(sampled));
+            strategy.wasSampled = true;
+            dataSize = strategy.data.size();
+            
+            // Find the best compression level that fits the screen width
+            int finalCompressionLevel = startCompressionLevel;
+            for (int i = startCompressionLevel; i < NUM_COMPRESSION_LEVELS; ++i) {
+                finalCompressionLevel = i;
+                const auto& level = COMPRESSION_LEVELS[i];
+                int requiredWidth = dataSize * (level.candleWidth + level.candleSpacing) + Constants::Y_AXIS_WIDTH;
+                if (requiredWidth <= Constants::MAX_CHART_WIDTH) {
+                    break; // This level fits
                 }
             }
-            strategy.data = sampled;
-            dataSize = sampled.size();
-        }
-        
-        // Find the best compression level that fits the screen width
-        int finalCompressionLevel = startCompressionLevel;
-        for (int i = startCompressionLevel; i < NUM_COMPRESSION_LEVELS; ++i) {
-            finalCompressionLevel = i;
-            const auto& level = COMPRESSION_LEVELS[i];
-            int requiredWidth = dataSize * (level.candleWidth + level.candleSpacing) + Constants::Y_AXIS_WIDTH;
-            if (requiredWidth <= Constants::MAX_CHART_WIDTH) {
-                break; // This level fits
+            
+            // Apply final configuration
+            const auto& level = COMPRESSION_LEVELS[finalCompressionLevel];
+            strategy.config = PlotConfiguration(level.candleWidth, level.candleSpacing);
+            strategy.wasCompressed = (finalCompressionLevel > 0);
+            strategy.compressionLevel = level.description;
+            
+            return strategy;
+        } else {
+            // FIXED: No sampling needed, create strategy with reference to original data
+            DisplayStrategy strategy;
+            strategy.data.reserve(candlesticks.size());
+            for (const auto& candle : candlesticks) {
+                strategy.data.emplace_back(candle);
             }
+            
+            // Find the best compression level that fits the screen width
+            int finalCompressionLevel = startCompressionLevel;
+            for (int i = startCompressionLevel; i < NUM_COMPRESSION_LEVELS; ++i) {
+                finalCompressionLevel = i;
+                const auto& level = COMPRESSION_LEVELS[i];
+                int requiredWidth = dataSize * (level.candleWidth + level.candleSpacing) + Constants::Y_AXIS_WIDTH;
+                if (requiredWidth <= Constants::MAX_CHART_WIDTH) {
+                    break; // This level fits
+                }
+            }
+            
+            // Apply final configuration
+            const auto& level = COMPRESSION_LEVELS[finalCompressionLevel];
+            strategy.config = PlotConfiguration(level.candleWidth, level.candleSpacing);
+            strategy.wasCompressed = (finalCompressionLevel > 0);
+            strategy.compressionLevel = level.description;
+            
+            return strategy;
         }
-        
-        // Apply final configuration
-        const auto& level = COMPRESSION_LEVELS[finalCompressionLevel];
-        strategy.config = PlotConfiguration(level.candleWidth, level.candleSpacing);
-        strategy.wasCompressed = (finalCompressionLevel > 0);
-        strategy.compressionLevel = level.description;
-        
-        return strategy;
     }
     
     /**

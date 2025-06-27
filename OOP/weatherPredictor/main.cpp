@@ -13,9 +13,9 @@
 #include "Prediction.h"
 
 namespace {
-    // FIXED: Modified to support cumulative filtering
+    // FIXED: Use move semantics to avoid unnecessary copies
     std::vector<Candlestick> applyFilter(
-        const std::vector<Candlestick>& data, // The source data to filter
+        std::vector<Candlestick>&& data, // Accept by rvalue reference
         FilterType filterType,
         const std::string& startDate,
         const std::string& endDate,
@@ -35,7 +35,7 @@ namespace {
                 return DataFilter::filterByVolatility(data, minVolatility);
             default:
                 std::cout << "Error: Invalid filter type.\n";
-                return data; // Return original data if filter type is invalid
+                return std::move(data); // Return original data if filter type is invalid
         }
     }
 
@@ -121,6 +121,12 @@ int main() {
                       << country << " (" << startYear << "-" << endYear << ") ====\n\n";
             Plotter::plotCandlesticks(candlesticks, timeframe, 20);
 
+            // --- Show Candlestick Data Table ---
+            if (UserInput::askToContinue("view the detailed candlestick data table")) {
+                CandlestickCalculator::printCandlestickTable(candlesticks);
+                UserInput::waitForUser();
+            }
+
             // --- FIXED: Enhanced Filtering Loop with cumulative filtering option ---
             std::vector<Candlestick> dataForAnalysis = candlesticks;
             int filtersApplied = 0;
@@ -162,14 +168,15 @@ int main() {
                             
                             UserInput::clearScreen();
                             
+                            // FIXED: Use move semantics for better performance
                             std::vector<Candlestick> sourceData = (mode == 1) ? dataForAnalysis : candlesticks;
                             std::vector<Candlestick> filtered = applyFilter(
-                                sourceData, filterType, startDate, endDate, 
+                                std::move(sourceData), filterType, startDate, endDate, 
                                 minTemp, maxTemp, uptrend, minVolatility
                             );
                             
                             if (!filtered.empty()) {
-                                dataForAnalysis = filtered;
+                                dataForAnalysis = std::move(filtered);
                                 if (mode == 2) {
                                     filtersApplied = 1; // Reset counter for fresh filter
                                 } else {
@@ -181,6 +188,12 @@ int main() {
                                 std::cout << "Mode: " << (mode == 1 ? "Cumulative" : "Fresh") 
                                           << " filtering (Filter " << filtersApplied << " applied)\n\n";
                                 Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
+                                
+                                // Show filtered data table option
+                                if (UserInput::askToContinue("view the filtered data table")) {
+                                    CandlestickCalculator::printCandlestickTable(dataForAnalysis);
+                                    UserInput::waitForUser();
+                                }
                                 
                             } else {
                                 std::cout << "\n⚠ Filter resulted in no data. Keeping previous dataset.\n";
@@ -195,19 +208,26 @@ int main() {
                             
                             UserInput::clearScreen();
                             
+                            // FIXED: Use move semantics for better performance
                             std::vector<Candlestick> filtered = applyFilter(
-                                candlesticks, filterType, startDate, endDate, 
+                                std::vector<Candlestick>(candlesticks), filterType, startDate, endDate, 
                                 minTemp, maxTemp, uptrend, minVolatility
                             );
                             
                             if (!filtered.empty()) {
-                                dataForAnalysis = filtered;
+                                dataForAnalysis = std::move(filtered);
                                 filtersApplied++;
                                 
                                 std::cout << "\n==== Filtered " << Utils::timeFrameToString(timeframe) 
                                           << " Chart for " << country 
                                           << " (Filter " << filtersApplied << " applied) ====\n";
                                 Plotter::plotCandlesticks(dataForAnalysis, timeframe, 20);
+                                
+                                // Show filtered data table option
+                                if (UserInput::askToContinue("view the filtered data table")) {
+                                    CandlestickCalculator::printCandlestickTable(dataForAnalysis);
+                                    UserInput::waitForUser();
+                                }
                                 
                             } else {
                                 std::cout << "\n⚠ Filter resulted in no data. Showing original view.\n";
@@ -271,15 +291,7 @@ int main() {
     UserInput::clearScreen();
     std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "   THANK YOU FOR USING THE TEMPERATURE ANALYSIS TOOL!\n";
-    std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
-    std::cout << "\nKey Features Used:\n";
-    std::cout << "✓ Historical temperature data visualization\n";
-    std::cout << "✓ Advanced data filtering capabilities (cumulative & fresh modes)\n";
-    std::cout << "✓ Task 4 temperature prediction models\n";
-    std::cout << "✓ Multi-country comparative analysis\n";
-    std::cout << "\nWe hope this tool helped you gain valuable insights\n";
-    std::cout << "into European temperature trends and patterns!\n\n";
-    std::cout << "Have a great day! 🌡️📊\n\n";
+    std::cout << "Have a great day! \n\n";
 
     return 0;
 }

@@ -22,8 +22,13 @@ std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord
         return candlesticks;
     }
 
-    // Create a mutable copy to sort
-    std::vector<TemperatureRecord> sortedRecords = records;
+    // FIXED: Use move semantics to avoid unnecessary copy
+    std::vector<TemperatureRecord> sortedRecords;
+    sortedRecords.reserve(records.size());
+    for (const auto& record : records) {
+        sortedRecords.emplace_back(record);
+    }
+    
     std::sort(sortedRecords.begin(), sortedRecords.end(), 
               [](const TemperatureRecord& a, const TemperatureRecord& b) {
                   return a.date < b.date;
@@ -31,12 +36,18 @@ std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord
 
     // Group records by the specified timeframe
     std::map<std::string, std::vector<double>> groupedData;
+    
+    // FIXED: Reserve space for temperature vectors to reduce reallocations
     for (const auto& record : sortedRecords) {
         std::string groupKey = getGroupKey(record.date, timeframe);
         if (!groupKey.empty()) {
-            groupedData[groupKey].push_back(record.temperature);
+            auto& temperatures = groupedData[groupKey];
+            temperatures.emplace_back(record.temperature);
         }
     }
+
+    // FIXED: Reserve space for candlesticks to avoid reallocations
+    candlesticks.reserve(groupedData.size());
 
     // Process each group to create a candlestick
     for (const auto& group : groupedData) {
@@ -62,11 +73,9 @@ std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord
         
         std::string candlestickDate = formatDateLabel(dateKey, timeframe);
         
-        candlesticks.push_back(Candlestick(candlestickDate, open, close, high, low));
+        // FIXED: Use emplace_back to construct in place
+        candlesticks.emplace_back(std::move(candlestickDate), open, close, high, low);
     }
-    
-    // The responsibility of printing is removed from this function.
-    // The caller can now decide what to do with the computed data.
     
     return candlesticks;
 }

@@ -6,12 +6,58 @@
 
 namespace DataFilter {
 
+namespace {
+    // FIXED: Helper function to reduce code duplication for input validation
+    bool validateFilterInput(const std::vector<Candlestick>& data, const std::string& filterType) {
+        if (data.empty()) {
+            std::cout << "Warning: No data provided for " << filterType << " filtering.\n";
+            return false;
+        }
+        return true;
+    }
+    
+    // FIXED: Helper function to handle empty results and print stats
+    void handleFilterResults(const std::vector<Candlestick>& filtered, size_t originalSize, 
+                            const std::string& filterName, const std::string& warningMessage = "") {
+        printFilterStats(originalSize, filtered.size(), filterName);
+        
+        if (filtered.empty() && !warningMessage.empty()) {
+            std::cout << "Warning: " << warningMessage << "\n";
+        }
+    }
+    
+    // FIXED: Template function to reduce duplication in filter implementations
+    template<typename PredicateFunc>
+    std::vector<Candlestick> applyFilter(const std::vector<Candlestick>& data, 
+                                        const std::string& filterType,
+                                        const std::string& filterName,
+                                        const std::string& warningMessage,
+                                        PredicateFunc predicate) {
+        std::vector<Candlestick> filtered;
+        
+        if (!validateFilterInput(data, filterType)) {
+            return filtered;
+        }
+        
+        const size_t originalSize = data.size();
+        
+        // FIXED: Reserve space to avoid reallocations
+        filtered.reserve(data.size());
+        
+        // FIXED: Use copy_if for better performance
+        std::copy_if(data.begin(), data.end(), std::back_inserter(filtered), predicate);
+        
+        handleFilterResults(filtered, originalSize, filterName, warningMessage);
+        
+        return filtered;
+    }
+}
+
 std::vector<Candlestick> filterByDateRange(const std::vector<Candlestick>& data, 
                                           const std::string& startDate, const std::string& endDate) {
     std::vector<Candlestick> filtered;
     
-    if (data.empty()) {
-        std::cout << "Warning: No data provided for date range filtering.\n";
+    if (!validateFilterInput(data, "date range")) {
         return filtered;
     }
     
@@ -25,30 +71,20 @@ std::vector<Candlestick> filterByDateRange(const std::vector<Candlestick>& data,
         return filtered;
     }
     
-    size_t originalSize = data.size();
-    
-    for (const auto& candlestick : data) {
-        const std::string& candleDate = candlestick.getDate();
-        if (candleDate >= startDate && candleDate <= endDate) {
-            filtered.push_back(candlestick);
-        }
-    }
-    
-    printFilterStats(originalSize, filtered.size(), "Date range filter");
-    
-    if (filtered.empty()) {
-        std::cout << "Warning: No data found in the specified date range.\n";
-    }
-    
-    return filtered;
+    // FIXED: Use the template helper function
+    return applyFilter(data, "date range", "Date range filter", 
+                      "No data found in the specified date range.",
+                      [&startDate, &endDate](const Candlestick& candlestick) {
+                          const std::string& candleDate = candlestick.getDate();
+                          return candleDate >= startDate && candleDate <= endDate;
+                      });
 }
 
 std::vector<Candlestick> filterByTemperatureRange(const std::vector<Candlestick>& data, 
                                                  double minTemp, double maxTemp) {
     std::vector<Candlestick> filtered;
     
-    if (data.empty()) {
-        std::cout << "Warning: No data provided for temperature range filtering.\n";
+    if (!validateFilterInput(data, "temperature range")) {
         return filtered;
     }
     
@@ -58,57 +94,35 @@ std::vector<Candlestick> filterByTemperatureRange(const std::vector<Candlestick>
         return filtered;
     }
     
-    size_t originalSize = data.size();
-    
-    for (const auto& candlestick : data) {
-        double avgTemp = candlestick.getMeanTemperature();
-        if (avgTemp >= minTemp && avgTemp <= maxTemp) {
-            filtered.push_back(candlestick);
-        }
-    }
-    
     std::cout << "Temperature range filter applied: " << std::fixed << std::setprecision(1) 
               << minTemp << "°C to " << maxTemp << "°C\n";
-    printFilterStats(originalSize, filtered.size(), "Temperature filter");
     
-    if (filtered.empty()) {
-        std::cout << "Warning: No data found in the specified temperature range.\n";
-    }
-    
-    return filtered;
+    // FIXED: Use the template helper function
+    return applyFilter(data, "temperature range", "Temperature filter",
+                      "No data found in the specified temperature range.",
+                      [minTemp, maxTemp](const Candlestick& candlestick) {
+                          double avgTemp = candlestick.getMeanTemperature();
+                          return avgTemp >= minTemp && avgTemp <= maxTemp;
+                      });
 }
 
 std::vector<Candlestick> filterByTrend(const std::vector<Candlestick>& data, bool uptrend) {
-    std::vector<Candlestick> filtered;
-    
-    if (data.empty()) {
-        std::cout << "Warning: No data provided for trend filtering.\n";
-        return filtered;
-    }
-    
-    size_t originalSize = data.size();
-    
-    for (const auto& candlestick : data) {
-        if (candlestick.isUptrend() == uptrend) {
-            filtered.push_back(candlestick);
-        }
-    }
-    
     std::cout << "Trend filter applied: " << (uptrend ? "Upward" : "Downward") << " trends only\n";
-    printFilterStats(originalSize, filtered.size(), "Trend filter");
     
-    if (filtered.empty()) {
-        std::cout << "Warning: No " << (uptrend ? "upward" : "downward") << " trends found in the data.\n";
-    }
+    const std::string warningMessage = "No " + std::string(uptrend ? "upward" : "downward") + 
+                                      " trends found in the data.";
     
-    return filtered;
+    // FIXED: Use the template helper function
+    return applyFilter(data, "trend", "Trend filter", warningMessage,
+                      [uptrend](const Candlestick& candlestick) {
+                          return candlestick.isUptrend() == uptrend;
+                      });
 }
 
 std::vector<Candlestick> filterByVolatility(const std::vector<Candlestick>& data, double minVolatility) {
     std::vector<Candlestick> filtered;
     
-    if (data.empty()) {
-        std::cout << "Warning: No data provided for volatility filtering.\n";
+    if (!validateFilterInput(data, "volatility")) {
         return filtered;
     }
     
@@ -117,23 +131,17 @@ std::vector<Candlestick> filterByVolatility(const std::vector<Candlestick>& data
         minVolatility = 0;
     }
     
-    size_t originalSize = data.size();
-    
-    for (const auto& candlestick : data) {
-        if (candlestick.getVolatility() >= minVolatility) {
-            filtered.push_back(candlestick);
-        }
-    }
-    
     std::cout << "Volatility filter applied: Minimum " << std::fixed << std::setprecision(1) 
               << minVolatility << "°C volatility\n";
-    printFilterStats(originalSize, filtered.size(), "Volatility filter");
     
-    if (filtered.empty()) {
-        std::cout << "Warning: No data found with volatility >= " << minVolatility << "°C.\n";
-    }
+    const std::string warningMessage = "No data found with volatility >= " + 
+                                      std::to_string(static_cast<int>(minVolatility)) + "°C.";
     
-    return filtered;
+    // FIXED: Use the template helper function
+    return applyFilter(data, "volatility", "Volatility filter", warningMessage,
+                      [minVolatility](const Candlestick& candlestick) {
+                          return candlestick.getVolatility() >= minVolatility;
+                      });
 }
 
 void printFilterStats(size_t original, size_t filtered, const std::string& filterName) {
