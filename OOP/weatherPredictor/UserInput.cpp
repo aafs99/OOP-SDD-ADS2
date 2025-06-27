@@ -9,6 +9,8 @@
 #include <iomanip>
 #include <vector>
 #include <map>
+#include <fstream>
+#include <ctime>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -52,6 +54,73 @@ namespace {
 }
 
 namespace UserInput {
+
+    void exportToFile(const std::string& filename, const std::vector<Candlestick>& data) {
+        std::ofstream file(filename);
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open file " << filename << " for writing\n";
+            return;
+        }
+        
+        // Write header
+        file << "Date,Open,High,Low,Close\n";
+        
+        // Write data
+        for (const auto& c : data) {
+            file << c.getDate() << ","
+                 << std::fixed << std::setprecision(1)
+                 << c.getOpen() << ","
+                 << c.getHigh() << ","
+                 << c.getLow() << ","
+                 << c.getClose() << "\n";
+        }
+        
+        file.close();
+        std::cout << "Data exported to " << filename << " (" << data.size() << " records)\n";
+    }
+    
+    bool askForDataExport(const std::vector<Candlestick>& data, const std::string& defaultPrefix) {
+        if (data.empty()) {
+            std::cout << "No data available for export.\n";
+            return false;
+        }
+        
+        std::cout << "\n=== DATA EXPORT ===\n";
+        std::cout << "Export " << data.size() << " candlestick records to CSV file?\n";
+        std::cout << "This will create a CSV file with Date, Open, High, Low, Close columns.\n";
+        
+        // Simple yes/no input
+        std::cout << "\nWould you like to export the data? (y/n): ";
+        std::string choice;
+        std::cin >> choice;
+        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
+        
+        if (choice != "y" && choice != "yes") {
+            return false;
+        }
+        
+        // Get filename from user
+        std::string filename;
+        std::cout << "Enter filename (without .csv extension) or press Enter for default: ";
+        
+        std::cin.ignore(); // Clear input buffer
+        std::getline(std::cin, filename);
+        
+        // Use default if empty
+        if (filename.empty()) {
+            filename = defaultPrefix;
+        }
+        
+        // Add .csv extension if not present
+        if (filename.length() < 4 || filename.substr(filename.length() - 4) != ".csv") {
+            filename += ".csv";
+        }
+        
+        // Perform the export
+        exportToFile(filename, data);
+        
+        return true;
+    }
 
 // Forward declaration from Internal namespace
 namespace Internal {
@@ -468,6 +537,5 @@ void clearInputBuffer() {
     std::cin.clear();
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
-
+} // namespace UserInput
 } 
-}

@@ -66,14 +66,14 @@ $(TARGET): $(OBJECTS)
 # Clean build artifacts
 clean:
 	rm -f $(OBJECTS) $(TARGET)
-	@echo "Clean complete!"
+	@echo "🧹 Clean complete!"
 
 # Rebuild everything
 rebuild: clean all
 
 # Show structure
 structure:
-	@echo "Project Structure:"
+	@echo "📁 Project Structure:"
 	@echo "Core Files ($(words $(CORE_SOURCES)) files):"
 	@echo "  $(CORE_SOURCES)" | tr ' ' '\n' | sed 's/^/    /'
 	@echo ""
@@ -85,7 +85,7 @@ structure:
 
 # Validate modular structure
 validate:
-	@echo "Validating modular structure..."
+	@echo "🔍 Validating modular structure..."
 	@for file in $(PREDICTION_SOURCES); do \
 		if [ ! -f "$$file" ]; then \
 			echo "Missing: $$file"; \
@@ -102,7 +102,7 @@ validate:
 # Install (copy to /usr/local/bin - requires sudo)
 install: $(TARGET)
 	sudo cp $(TARGET) /usr/local/bin/
-	@echo "Installed to /usr/local/bin/$(TARGET)"
+	@echo "📦 Installed to /usr/local/bin/$(TARGET)"
 
 # Show help
 help:

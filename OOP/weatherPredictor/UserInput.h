@@ -37,6 +37,10 @@ namespace UserInput {
     void waitForUser();
     bool askToAnalyzeAnotherCountry();
     bool askForPredictionChart();
+
+    // Export functions
+    void exportToFile(const std::string& filename, const std::vector<Candlestick>& data);
+    bool askForDataExport(const std::vector<Candlestick>& data, const std::string& defaultPrefix = "temperature_data");     
     
     // Internal functions
     namespace Internal {

@@ -70,6 +70,14 @@ bool ApplicationController::performSingleAnalysis() {
     // Handle prediction workflow
     handlePredictionWorkflow(dataForAnalysis, candlesticks, timeframe, country, 
                            startYear, endYear, wasFiltered);
+
+    std::string exportPrefix = country + "_" + std::to_string(startYear) + "-" + std::to_string(endYear) + 
+    "_" + Utils::timeFrameToString(timeframe);
+    std::transform(exportPrefix.begin(), exportPrefix.end(), exportPrefix.begin(), ::tolower);
+    
+    if (UserInput::askForDataExport(dataForAnalysis, exportPrefix)) {
+        UserInput::waitForUser();
+    }
     
     // Ask if user wants to continue
     return UserInput::askToAnalyzeAnotherCountry();
