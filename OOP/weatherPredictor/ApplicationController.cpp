@@ -359,5 +359,5 @@ void ApplicationController::displayPredictions(const std::vector<Candlestick>& d
     config.showValidation = (data.size() >= 4);
     config.showChart = (data.size() >= 4);
     
-    Prediction::displayEnhancedPredictionResults(data, timeframe, country, startYear, endYear, config);
+    Prediction::displayPredictionResults(data, timeframe, country, startYear, endYear, config);
 }

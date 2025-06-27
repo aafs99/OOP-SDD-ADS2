@@ -26,6 +26,24 @@ namespace Constants {
     const size_t ABSOLUTE_MAX_DISPLAY_POINTS = 120; // Absolute maximum data points
     const int MIN_CHARS_PER_LABEL = 6;              // Minimum characters per X-axis label
     
+    // ENHANCED: New chart constants to eliminate magic numbers
+    const int ENHANCED_CHART_MIN_WIDTH = 50;        // Minimum enhanced chart width
+    const int ENHANCED_CHART_MAX_WIDTH = 80;        // Maximum enhanced chart width
+    const int ENHANCED_CHART_DEFAULT_WIDTH = 60;    // Default enhanced chart width
+    const double ENHANCED_CHART_PADDING_RATIO = 0.15; // Enhanced chart padding (15%)
+    const double MIN_CHART_PADDING = 1.0;           // Minimum padding in temperature units
+    const int VERTICAL_CHART_HEIGHT = 20;           // Default vertical chart height
+    const int VERTICAL_CHART_MAX_PERIODS = 40;      // Maximum periods shown in vertical chart
+    const int PERIOD_LABEL_INTERVAL = 5;            // Interval for period labels in vertical chart
+    const double TEMP_TOLERANCE_FACTOR = 0.5;       // Temperature tolerance for symbol placement
+    const int PREDICTION_VALUE_WIDTH = 6;           // Width for prediction value display
+    const double TEMP_RANGE_SANITY_CHECK = 100.0;   // Sanity check for temperature values
+    
+    // Prediction model constants
+    const size_t MIN_LINEAR_DATA_SIZE = 2;          // Minimum data points for linear regression
+    const size_t MIN_HEURISTIC_DATA_SIZE = 2;       // Minimum data points for heuristic model
+    const size_t MIN_MOVING_AVERAGE_DATA_SIZE = 1;  // Minimum data points for moving average
+    
     // Table formatting constants
     const int TABLE_SEPARATOR_WIDTH = 60;           // Width for table separators
     const int DATE_COLUMN_WIDTH = 12;               // Width for date column
@@ -38,9 +56,12 @@ namespace Constants {
     const int VALIDATION_SEPARATOR_WIDTH_71 = 71;   // Validation results separator
     const int VALIDATION_SEPARATOR_WIDTH_72 = 72;   // Validation section separator
     const int CHART_HEADER_WIDTH_78 = 78;           // Chart header separator
+    const int ENHANCED_CHART_SEPARATOR_WIDTH_95 = 95; // Enhanced chart separator width
     
     // Number formatting constants
     const int NUMBER_FORMAT_PRECISION = 5;          // Default precision for number formatting
+    const int TEMPERATURE_DISPLAY_PRECISION = 1;    // Precision for temperature display
+    const int PERIOD_LABEL_MAX_LENGTH = 4;          // Maximum length for period labels
 }
 
 // Common enums used across the application
