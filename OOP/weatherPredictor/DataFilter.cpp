@@ -7,7 +7,7 @@
 namespace DataFilter {
 
 namespace {
-    // FIXED: Helper function to reduce code duplication for input validation
+    // Helper function to reduce code duplication for input validation
     bool validateFilterInput(const std::vector<Candlestick>& data, const std::string& filterType) {
         if (data.empty()) {
             std::cout << "Warning: No data provided for " << filterType << " filtering.\n";
@@ -16,7 +16,7 @@ namespace {
         return true;
     }
     
-    // FIXED: Helper function to handle empty results and print stats
+    // Helper function to handle empty results and print stats
     void handleFilterResults(const std::vector<Candlestick>& filtered, size_t originalSize, 
                             const std::string& filterName, const std::string& warningMessage = "") {
         printFilterStats(originalSize, filtered.size(), filterName);
@@ -26,7 +26,7 @@ namespace {
         }
     }
     
-    // FIXED: Template function to reduce duplication in filter implementations
+    // Template function to reduce duplication in filter implementations
     template<typename PredicateFunc>
     std::vector<Candlestick> applyFilter(const std::vector<Candlestick>& data, 
                                         const std::string& filterType,
@@ -41,10 +41,10 @@ namespace {
         
         const size_t originalSize = data.size();
         
-        // FIXED: Reserve space to avoid reallocations
+        // Reserve space to avoid reallocations
         filtered.reserve(data.size());
         
-        // FIXED: Use copy_if for better performance
+        // Use copy_if for better performance
         std::copy_if(data.begin(), data.end(), std::back_inserter(filtered), predicate);
         
         handleFilterResults(filtered, originalSize, filterName, warningMessage);
@@ -71,7 +71,7 @@ std::vector<Candlestick> filterByDateRange(const std::vector<Candlestick>& data,
         return filtered;
     }
     
-    // FIXED: Use the template helper function
+    // Use the template helper function
     return applyFilter(data, "date range", "Date range filter", 
                       "No data found in the specified date range.",
                       [&startDate, &endDate](const Candlestick& candlestick) {
@@ -97,7 +97,7 @@ std::vector<Candlestick> filterByTemperatureRange(const std::vector<Candlestick>
     std::cout << "Temperature range filter applied: " << std::fixed << std::setprecision(1) 
               << minTemp << "°C to " << maxTemp << "°C\n";
     
-    // FIXED: Use the template helper function
+    // Use the template helper function
     return applyFilter(data, "temperature range", "Temperature filter",
                       "No data found in the specified temperature range.",
                       [minTemp, maxTemp](const Candlestick& candlestick) {
@@ -112,7 +112,7 @@ std::vector<Candlestick> filterByTrend(const std::vector<Candlestick>& data, boo
     const std::string warningMessage = "No " + std::string(uptrend ? "upward" : "downward") + 
                                       " trends found in the data.";
     
-    // FIXED: Use the template helper function
+    // Use the template helper function
     return applyFilter(data, "trend", "Trend filter", warningMessage,
                       [uptrend](const Candlestick& candlestick) {
                           return candlestick.isUptrend() == uptrend;
@@ -137,7 +137,7 @@ std::vector<Candlestick> filterByVolatility(const std::vector<Candlestick>& data
     const std::string warningMessage = "No data found with volatility >= " + 
                                       std::to_string(static_cast<int>(minVolatility)) + "°C.";
     
-    // FIXED: Use the template helper function
+    // Use the template helper function
     return applyFilter(data, "volatility", "Volatility filter", warningMessage,
                       [minVolatility](const Candlestick& candlestick) {
                           return candlestick.getVolatility() >= minVolatility;

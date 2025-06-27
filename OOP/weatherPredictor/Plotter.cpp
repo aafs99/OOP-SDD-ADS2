@@ -23,7 +23,7 @@ namespace {
     };
     const int NUM_COMPRESSION_LEVELS = sizeof(COMPRESSION_LEVELS) / sizeof(COMPRESSION_LEVELS[0]);
 
-    // FIXED: Use reference to avoid copying data unless necessary
+    // Use reference to avoid copying data unless necessary
     struct DisplayStrategy {
         std::vector<Candlestick> data;
         PlotConfiguration config;
@@ -31,7 +31,7 @@ namespace {
         bool wasCompressed;
         std::string compressionLevel;
         
-        // FIXED: Move constructor to avoid unnecessary copies
+        // Move constructor to avoid unnecessary copies
         DisplayStrategy(std::vector<Candlestick>&& candlesticks) 
             : data(std::move(candlesticks)), wasSampled(false), wasCompressed(false), compressionLevel("Standard") {}
         
@@ -66,7 +66,7 @@ namespace {
             startCompressionLevel = 1; // Start with "Compact" for medium datasets
         }
         
-        // FIXED: Only create strategy with data copy if sampling is needed
+        // Only create strategy with data copy if sampling is needed
         if (needsSampling) {
             std::vector<Candlestick> sampled;
             sampled.reserve(targetSize);
@@ -99,7 +99,7 @@ namespace {
             
             return strategy;
         } else {
-            // FIXED: No sampling needed, create strategy with reference to original data
+            // No sampling needed, create strategy with reference to original data
             DisplayStrategy strategy;
             strategy.data.reserve(candlesticks.size());
             for (const auto& candle : candlesticks) {
@@ -166,7 +166,7 @@ namespace {
     }
     
     /**
-     * @brief FIXED: Formats a date string into a readable label based on the timeframe.
+     * @brief Formats a date string into a readable label based on the timeframe.
      */
     std::string formatDateLabel(const std::string& date, TimeFrame timeframe) {
         if (date.length() < 10) return date;
@@ -183,7 +183,7 @@ namespace {
             if (monthNum >= 1 && monthNum <= 12) {
                 switch (timeframe) {
                     case TimeFrame::Daily:   
-                        // FIXED: Show actual day for daily timeframe
+                        // Show actual day for daily timeframe
                         return day + "/" + month;  // e.g., "15/03" instead of "Mar'24"
                     case TimeFrame::Monthly: 
                         return monthNames[monthNum - 1] + " " + shortYear;
@@ -219,7 +219,7 @@ namespace {
         return config.emptySpace;
     }
 
-    // FIXED: Optimized to find both min and max in single pass
+    // Optimized to find both min and max in single pass
     std::pair<double, double> findTemperatureRange(const std::vector<Candlestick>& candlesticks) {
         if (candlesticks.empty()) return {0.0, 0.0};
         
@@ -269,7 +269,7 @@ void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame ti
 
     DisplayStrategy strategy = determineDisplayStrategy(candlesticks, timeframe);
     
-    // FIXED: Use optimized single-pass temperature range finding
+    // Use optimized single-pass temperature range finding
     std::pair<double, double> tempRange = findTemperatureRange(strategy.data);
     double minTemp = tempRange.first;
     double maxTemp = tempRange.second;

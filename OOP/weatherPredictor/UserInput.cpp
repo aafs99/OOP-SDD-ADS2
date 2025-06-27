@@ -33,7 +33,7 @@ namespace {
         {"SK", "Slovakia"}
     };
     
-    // FIXED: Helper function to reduce code duplication for y/n input validation
+    // Helper function to reduce code duplication for y/n input validation
     bool getYesNoInput(const std::string& prompt) {
         std::string choice;
         std::cout << prompt;
@@ -149,7 +149,7 @@ TimeFrame getTimeFrame() {
     }
 }
 
-// FIXED: Use helper function to reduce code duplication
+// Use helper function to reduce code duplication
 bool askForFiltering() {
     std::cout << "\n=== Data Filtering ===\n";
     std::cout << "Filtering allows you to focus your analysis on specific aspects of the data:\n";
@@ -161,9 +161,9 @@ bool askForFiltering() {
     return getYesNoInput("\nWould you like to apply a filter to the data? (y/n): ");
 }
 
-// FIXED: Use helper function to reduce code duplication
+// Use helper function to reduce code duplication
 bool askForPredictions() {
-    std::cout << "\n=== ENHANCED TASK 4: Temperature Predictions ===\n";
+    std::cout << "\n=== Temperature Predictions ===\n";
     std::cout << "Generate advanced temperature forecasts with confidence metrics:\n";
     std::cout << "  • Linear Regression: R² confidence metric (trend strength)\n";
     std::cout << "  • Moving Average: Stability confidence (based on volatility)\n";
@@ -174,7 +174,7 @@ bool askForPredictions() {
     return getYesNoInput("\nWould you like to generate enhanced temperature predictions? (y/n): ");
 }
 
-// FIXED: Use helper function to reduce code duplication
+// Use helper function to reduce code duplication
 bool askToContinue(const std::string& operation) {
     return getYesNoInput("\nWould you like to " + operation + "? (y/n): ");
 }
@@ -238,7 +238,7 @@ void displayAvailableCountries() {
     }
 }
 
-// FIXED: Improved cross-platform screen clearing
+// Improved cross-platform screen clearing
 void clearScreen() {
     #ifdef _WIN32
         // Windows
@@ -276,7 +276,7 @@ void waitForUser() {
     std::cin.get();
 }
 
-// FIXED: Use helper function to reduce code duplication
+// Use helper function to reduce code duplication
 bool askForPredictionChart() {
     std::cout << "\n=== PREDICTION COMPARISON CHART ===\n";
     std::cout << "Generate a visual chart comparing actual temperatures with predictions\n";
@@ -290,7 +290,7 @@ bool askForPredictionChart() {
     return getYesNoInput("\nWould you like to generate the prediction comparison chart? (y/n): ");
 }
 
-// FIXED: Use helper function to reduce code duplication
+// Use helper function to reduce code duplication
 bool askToAnalyzeAnotherCountry() {
     std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "Analysis Complete!\n";

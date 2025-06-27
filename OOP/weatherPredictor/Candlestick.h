@@ -26,7 +26,7 @@ public:
     bool isUptrend() const { return close_ >= open_; }
     double getVolatility() const { return high_ - low_; }
     
-    // FIXED: Renamed and documented confusing method
+    // 
     /**
      * @brief Gets the mean temperature for this period
      * @return The average temperature (same as close value)

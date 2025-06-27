@@ -22,7 +22,6 @@ std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord
         return candlesticks;
     }
 
-    // FIXED: Use move semantics to avoid unnecessary copy
     std::vector<TemperatureRecord> sortedRecords;
     sortedRecords.reserve(records.size());
     for (const auto& record : records) {
@@ -37,7 +36,7 @@ std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord
     // Group records by the specified timeframe
     std::map<std::string, std::vector<double>> groupedData;
     
-    // FIXED: Reserve space for temperature vectors to reduce reallocations
+    // Reserve space for temperature vectors to reduce reallocations
     for (const auto& record : sortedRecords) {
         std::string groupKey = getGroupKey(record.date, timeframe);
         if (!groupKey.empty()) {
@@ -46,7 +45,7 @@ std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord
         }
     }
 
-    // FIXED: Reserve space for candlesticks to avoid reallocations
+    // Reserve space for candlesticks to avoid reallocations
     candlesticks.reserve(groupedData.size());
 
     // Process each group to create a candlestick
@@ -73,7 +72,7 @@ std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord
         
         std::string candlestickDate = formatDateLabel(dateKey, timeframe);
         
-        // FIXED: Use emplace_back to construct in place
+        // Use emplace_back to construct in place
         candlesticks.emplace_back(std::move(candlestickDate), open, close, high, low);
     }
     

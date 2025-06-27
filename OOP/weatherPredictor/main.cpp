@@ -13,7 +13,7 @@
 #include "Prediction.h"
 
 namespace {
-    // FIXED: Use move semantics to avoid unnecessary copies
+    // Use move semantics to avoid unnecessary copies
     std::vector<Candlestick> applyFilter(
         std::vector<Candlestick>&& data, // Accept by rvalue reference
         FilterType filterType,
@@ -39,7 +39,7 @@ namespace {
         }
     }
 
-    // Helper function to display Task 4 prediction analysis
+    // Helper function to display prediction analysis
     void displayPredictions(const std::vector<Candlestick>& data, TimeFrame timeframe, 
                           const std::string& country, int startYear, int endYear) {
         if (data.empty()) {
@@ -47,7 +47,7 @@ namespace {
             return;
         }
 
-        // Use the simplified prediction display for Task 4
+        // Use the simplified prediction display
         Prediction::displayPredictionResults(data, timeframe, country, startYear, endYear);
     }
 }
@@ -127,7 +127,7 @@ int main() {
                 UserInput::waitForUser();
             }
 
-            // --- FIXED: Enhanced Filtering Loop with cumulative filtering option ---
+            // Filtering Loop with cumulative filtering option ---
             std::vector<Candlestick> dataForAnalysis = candlesticks;
             int filtersApplied = 0;
             
@@ -168,7 +168,7 @@ int main() {
                             
                             UserInput::clearScreen();
                             
-                            // FIXED: Use move semantics for better performance
+                            // Use move semantics for better performance
                             std::vector<Candlestick> sourceData = (mode == 1) ? dataForAnalysis : candlesticks;
                             std::vector<Candlestick> filtered = applyFilter(
                                 std::move(sourceData), filterType, startDate, endDate, 
@@ -208,7 +208,7 @@ int main() {
                             
                             UserInput::clearScreen();
                             
-                            // FIXED: Use move semantics for better performance
+                            // Use move semantics for better performance
                             std::vector<Candlestick> filtered = applyFilter(
                                 std::vector<Candlestick>(candlesticks), filterType, startDate, endDate, 
                                 minTemp, maxTemp, uptrend, minVolatility

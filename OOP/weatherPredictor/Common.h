@@ -10,7 +10,7 @@ namespace Constants {
     const std::string DATE_FORMAT = "YYYY-MM-DD";
     const std::string DATETIME_FORMAT = "YYYY-MM-DD HH:MM:SS";
     
-    // FIXED: Added constants to eliminate magic numbers
+    // Added constants to eliminate magic numbers
     const double EPSILON = 1e-10;                    // For floating point comparisons
     const double CHART_PADDING_RATIO = 0.1;         // 10% padding for chart display
     const int CHART_WIDTH = 20;                     // Width of prediction comparison charts
