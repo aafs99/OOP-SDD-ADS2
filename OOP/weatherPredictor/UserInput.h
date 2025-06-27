@@ -36,6 +36,7 @@ namespace UserInput {
     void clearScreen();
     void waitForUser();
     bool askToAnalyzeAnotherCountry();
+    bool askForPredictionChart();
     
     // Internal functions
     namespace Internal {

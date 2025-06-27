@@ -53,7 +53,7 @@ namespace {
 }
 
 int main() {
-    const std::string filename = "./data/european_temperatures_1980_2019.csv";
+    const std::string filename = "./weather_data_EU_1980-2019_temp_only.csv";
     
     // Clear screen and show welcome message
     UserInput::clearScreen();

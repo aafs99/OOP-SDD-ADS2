@@ -150,12 +150,14 @@ bool askForFiltering() {
 bool askForPredictions() {
     std::string choice;
     
-    std::cout << "\n=== Temperature Predictions ===\n";
-    std::cout << "Generate temperature forecasts using prediction models:\n";
-    std::cout << "  • Linear Regression: Identifies long-term temperature trends\n";
-    std::cout << "  • Moving Average: Smooths short-term fluctuations for stable forecasts\n";
-    std::cout << "  • Momentum Model: Projects recent temperature changes forward\n";
-    std::cout << "\nWould you like to generate temperature predictions? (y/n): ";
+    std::cout << "\n=== ENHANCED TASK 4: Temperature Predictions ===\n";
+    std::cout << "Generate advanced temperature forecasts with confidence metrics:\n";
+    std::cout << "  • Linear Regression: R² confidence metric (trend strength)\n";
+    std::cout << "  • Moving Average: Stability confidence (based on volatility)\n";
+    std::cout << "  • Momentum Model: Consistency confidence (trend reliability)\n";
+    std::cout << "  • Cross-Validation: Model accuracy assessment (if sufficient data)\n";
+    std::cout << "  • Prediction Charts: Visual comparison of actual vs predicted (Figure 4 style)\n";
+    std::cout << "\nWould you like to generate enhanced temperature predictions? (y/n): ";
     
     while (true) {
         std::cin >> choice;
@@ -246,14 +248,46 @@ void displayAvailableCountries() {
 }
 
 void clearScreen() {
-    // Use ANSI escape codes to clear screen 
+    // Use ANSI escape codes to clear screen - works on most modern terminals
     std::cout << "\033[2J\033[H" << std::flush;
+    
+    // Alternative: Use system-specific commands
+    // #ifdef _WIN32
+    //     system("cls");
+    // #else
+    //     system("clear");
+    // #endif
 }
 
 void waitForUser() {
     std::cout << "\nPress Enter to continue...";
     std::cin.ignore();
     std::cin.get();
+}
+
+bool askForPredictionChart() {
+    std::string choice;
+    
+    std::cout << "\n=== PREDICTION COMPARISON CHART ===\n";
+    std::cout << "Generate a visual chart comparing actual temperatures with predictions\n";
+    std::cout << "from all three models across the historical period.\n";
+    std::cout << "\nThis creates 'Figure 4' style visualization showing:\n";
+    std::cout << "• Actual temperatures (black dots)\n";
+    std::cout << "• Linear model predictions (blue triangles)\n";
+    std::cout << "• Moving average predictions (green squares)\n";
+    std::cout << "• Heuristic model predictions (red diamonds)\n";
+    std::cout << "\nWould you like to generate the prediction comparison chart? (y/n): ";
+    
+    while (true) {
+        std::cin >> choice;
+        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
+        
+        if (choice == "y" || choice == "yes") return true;
+        if (choice == "n" || choice == "no") return false;
+        
+        std::cout << "Please enter 'y' for yes or 'n' for no: ";
+        Internal::clearInputBuffer();
+    }
 }
 
 bool askToAnalyzeAnotherCountry() {
