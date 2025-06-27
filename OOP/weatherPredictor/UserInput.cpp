@@ -12,6 +12,7 @@
 #include <fstream>
 #include <ctime>
 
+//self written code start
 #ifdef _WIN32
     #include <windows.h>
     #include <cstdlib>
@@ -35,7 +36,7 @@ namespace {
         {"SK", "Slovakia"}
     };
     
-    // Helper function to reduce code duplication for y/n input validation
+    // Helper function for y/n input validation
     bool getYesNoInput(const std::string& prompt) {
         std::string choice;
         std::cout << prompt;
@@ -218,7 +219,7 @@ TimeFrame getTimeFrame() {
     }
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to apply a filter to the data.
 bool askForFiltering() {
     std::cout << "\n=== Data Filtering ===\n";
     std::cout << "Filtering allows you to focus your analysis on specific aspects of the data:\n";
@@ -230,7 +231,7 @@ bool askForFiltering() {
     return getYesNoInput("\nWould you like to apply a filter to the data? (y/n): ");
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to generate advanced temperature predictions.
 bool askForPredictions() {
     std::cout << "\n=== Temperature Predictions ===\n";
     std::cout << "Generate advanced temperature forecasts with confidence metrics:\n";
@@ -243,7 +244,7 @@ bool askForPredictions() {
     return getYesNoInput("\nWould you like to generate enhanced temperature predictions? (y/n): ");
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to continue with a specific operation.
 bool askToContinue(const std::string& operation) {
     return getYesNoInput("\nWould you like to " + operation + "? (y/n): ");
 }
@@ -345,7 +346,7 @@ void waitForUser() {
     std::cin.get();
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to generate a prediction comparison chart.
 bool askForPredictionChart() {
     std::cout << "\n=== PREDICTION COMPARISON CHART ===\n";
     std::cout << "Generate a visual chart comparing actual temperatures with predictions\n";
@@ -359,7 +360,7 @@ bool askForPredictionChart() {
     return getYesNoInput("\nWould you like to generate the prediction comparison chart? (y/n): ");
 }
 
-// Use helper function to reduce code duplication
+// Ask the user if they want to analyze another country.
 bool askToAnalyzeAnotherCountry() {
     std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "Analysis Complete!\n";
@@ -537,5 +538,6 @@ void clearInputBuffer() {
     std::cin.clear();
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
-} // namespace UserInput
 } 
+} 
+//self written code  end

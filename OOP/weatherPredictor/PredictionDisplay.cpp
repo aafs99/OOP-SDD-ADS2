@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <sstream>
 
+//self written code start
 void PredictionDisplay::displayEnhancedResults(
     const std::vector<Candlestick>& data,
     TimeFrame timeframe,
@@ -160,3 +161,4 @@ std::string PredictionDisplay::formatDouble(double value, int precision) {
     oss << std::fixed << std::setprecision(precision) << value;
     return oss.str();
 }
+// self written code end

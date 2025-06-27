@@ -6,7 +6,7 @@
 #include "Candlestick.h"
 #include "Common.h"
 #include "PlotConfiguration.h"
-
+//self written code start
 namespace Plotter {
     /**
      *  Plots a vector of Candlestick data to the console.
@@ -23,5 +23,5 @@ namespace Plotter {
         int chartHeight = 20
     );
 }
-
 #endif
+//self written code end

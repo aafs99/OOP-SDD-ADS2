@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <sstream>
 
+//self written code start
 //! TDL Output looks messy, replace txt with ANSI codes for better readability
 void PredictionChart::displayVerticalChart(
     const std::vector<Candlestick>& data,
@@ -328,3 +329,4 @@ std::string PredictionChart::formatDouble(double value, int precision) {
     oss << std::fixed << std::setprecision(precision) << value;
     return oss.str();
 }
+// self written code end

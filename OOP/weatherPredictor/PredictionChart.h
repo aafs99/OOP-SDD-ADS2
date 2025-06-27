@@ -8,6 +8,7 @@
 #include "Candlestick.h"
 #include "Common.h"
 
+//self written code start
 /**
  * Handles vertical chart display for prediction visualization
  */
@@ -72,3 +73,5 @@ double PredictionChart::calculateMean(const Container& values) noexcept {
 }
 
 #endif // PREDICTION_CHART_H
+
+//self written code start

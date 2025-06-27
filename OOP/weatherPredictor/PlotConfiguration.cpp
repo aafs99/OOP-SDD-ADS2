@@ -1,5 +1,5 @@
 #include "PlotConfiguration.h"
-
+//self written code start
 PlotConfiguration::PlotConfiguration(int width, int spacing) 
     : candleWidth(width), candleSpacing(spacing) {
     update();
@@ -18,3 +18,4 @@ void PlotConfiguration::update() {
         wickShape = "|";
     }
 }
+//self written code end

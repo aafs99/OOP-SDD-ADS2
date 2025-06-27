@@ -8,7 +8,7 @@
 #include <iomanip>
 
 // Core prediction algorithms
-
+//self written code start
 PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candlestick>& data) {
     const std::string modelName = "Linear Regression";
     std::string errorMessage;
@@ -55,7 +55,9 @@ PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candl
     
     return PredictionResult(prediction, rSquared, modelName, confDesc.str());
 }
+// self written code end
 
+//self written code start
 PredictionResult Prediction::predictMovingAverageWithConfidence(
     const std::vector<Candlestick>& data, int windowSize) {
     
@@ -132,6 +134,7 @@ void Prediction::displayPredictionResults(
     
     PredictionDisplay::displayEnhancedResults(data, timeframe, country, startYear, endYear, config);
 }
+// self written code end
 
 // Private helper methods
 
@@ -210,6 +213,7 @@ double Prediction::calculateConsistencyConfidence(const std::vector<Candlestick>
     
     return std::max(0.0, std::min(consistencyConfidence, 1.0));
 }
+// self written code end
 
 bool Prediction::validateDataSize(
     const std::vector<Candlestick>& data, 
@@ -255,6 +259,7 @@ std::string Prediction::getConfidenceLevel(double confidence) noexcept {
     }
 }
 
+//self written code start
 std::string Prediction::determineNextPeriod(
     const std::vector<Candlestick>& data, 
     TimeFrame timeframe, int endYear) {
@@ -289,3 +294,4 @@ std::string Prediction::determineNextPeriod(
             return "Next period";
     }
 }
+// self written code end

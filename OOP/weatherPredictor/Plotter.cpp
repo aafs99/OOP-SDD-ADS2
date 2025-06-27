@@ -6,7 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
-
+//self written code start
 namespace {
     // ANSI color codes
     const std::string ANSI_COLOR_GREEN = "\033[32m";
@@ -255,7 +255,7 @@ namespace {
         std::cout << "  Down-Trends:   " << downCount << " (" << std::fixed << std::setprecision(1) << (100.0 - upPercent) << "%)\n\n";
     }
 
-} // anonymous namespace
+} 
 
 namespace Plotter {
 
@@ -301,3 +301,4 @@ void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame ti
 }
 
 } // namespace Plotter
+//self written code end

@@ -2,7 +2,7 @@
 #define PLOT_CONFIGURATION_H
 
 #include <string>
-
+//self written code start
 struct PlotConfiguration {
     int candleWidth;
     int candleSpacing;
@@ -24,3 +24,4 @@ struct CompressionLevel {
 };
 
 #endif
+//self written code start

@@ -7,6 +7,7 @@
 #include <limits>
 #include <sstream>
 
+//self written code start
 ValidationResult PredictionValidation::validateModel(
     const std::vector<Candlestick>& data,
     const PredictionFunction& modelFunction,
@@ -147,3 +148,4 @@ std::string PredictionValidation::formatDouble(double value, int precision) {
     oss << std::fixed << std::setprecision(precision) << value;
     return oss.str();
 }
+// self written code end

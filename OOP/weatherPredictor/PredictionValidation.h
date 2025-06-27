@@ -7,8 +7,9 @@
 #include "Prediction.h"
 #include "Candlestick.h"
 
+//self written code start
 /**
- * Structure to hold cross-validation results
+ * Hold cross-validation results
  */
 struct ValidationResult {
     double meanAbsoluteError{0.0};
@@ -74,3 +75,4 @@ double PredictionValidation::calculateMean(const Container& values) noexcept {
 }
 
 #endif // PREDICTION_VALIDATION_H
+//self written code end

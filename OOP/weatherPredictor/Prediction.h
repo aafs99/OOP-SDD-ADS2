@@ -8,6 +8,7 @@
 #include "Candlestick.h"
 #include "Common.h"
 
+//self written code start
 /**
  * Structure to hold prediction results with confidence metrics
  */
@@ -112,3 +113,4 @@ double Prediction::calculateStandardDeviation(const Container& values, double me
 }
 
 #endif // PREDICTION_H
+//self written code end

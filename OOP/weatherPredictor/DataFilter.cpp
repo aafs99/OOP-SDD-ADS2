@@ -7,7 +7,7 @@
 namespace DataFilter {
 
 namespace {
-    // Helper function to reduce code duplication for input validation
+    // Helper function for input validation
     bool validateFilterInput(const std::vector<Candlestick>& data, const std::string& filterType) {
         if (data.empty()) {
             std::cout << "Warning: No data provided for " << filterType << " filtering.\n";
@@ -26,7 +26,8 @@ namespace {
         }
     }
     
-    // Template function to reduce duplication in filter implementations
+    //Applies a filter based on a predicate function
+    // and handles the results, including printing stats and warnings.
     template<typename PredicateFunc>
     std::vector<Candlestick> applyFilter(const std::vector<Candlestick>& data, 
                                         const std::string& filterType,
@@ -53,6 +54,7 @@ namespace {
     }
 }
 
+//self written code start
 std::vector<Candlestick> filterByDateRange(const std::vector<Candlestick>& data, 
                                           const std::string& startDate, const std::string& endDate) {
     std::vector<Candlestick> filtered;
@@ -154,3 +156,4 @@ void printFilterStats(size_t original, size_t filtered, const std::string& filte
 }
 
 } // namespace DataFilter
+//self written code end

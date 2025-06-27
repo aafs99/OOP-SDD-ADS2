@@ -8,6 +8,7 @@
 #include "Candlestick.h"
 #include "Common.h"
 
+//self written code start
 /**
  * Handles all prediction display and formatting functionality
  */
@@ -37,3 +38,4 @@ private:
 };
 
 #endif // PREDICTION_DISPLAY_H
+//self written code start
