@@ -5,6 +5,11 @@
 #include <iostream>
 #include <iomanip>
 
+/*self written code start (code built with reference to : 
+ https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
+ https://github.com/VivekThazhathattil/candlesticks-SFML
+*/
+
 namespace CandlestickCalculator {
 
 /**
@@ -174,3 +179,4 @@ void printCandlestickTable(const std::vector<Candlestick>& candlesticks) {
 }
 
 } // namespace CandlestickCalculator
+// self written code end

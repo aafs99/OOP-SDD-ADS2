@@ -7,8 +7,12 @@
 #include <sstream>
 #include <iomanip>
 
-// Core prediction algorithms
-//self written code start
+// Core prediction algorithm
+/*self written code start (code built with reference to : 
+    https://github.com/NumericalMax/Linear-Regression)
+    https://www.geeksforgeeks.org/regression-analysis-and-the-best-fitting-line-using-c/
+*/
+
 PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candlestick>& data) {
     const std::string modelName = "Linear Regression";
     std::string errorMessage;
@@ -57,7 +61,9 @@ PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candl
 }
 // self written code end
 
-//self written code start
+/*self written code start (code built with reference to : 
+    https://www.youtube.com/watch?v=6vH3NFcpr3w
+*/
 PredictionResult Prediction::predictMovingAverageWithConfidence(
     const std::vector<Candlestick>& data, int windowSize) {
     
@@ -95,7 +101,11 @@ PredictionResult Prediction::predictMovingAverageWithConfidence(
     
     return PredictionResult(prediction, stabilityConfidence, modelName, confDesc.str());
 }
+//self written code end
 
+/*self written code start (code built with reference to :
+    *https://github.com/MisaghMomeniB/Stock-Momentum-Analysis
+*/
 PredictionResult Prediction::predictHeuristicWithConfidence(const std::vector<Candlestick>& data) {
     const std::string modelName = "Heuristic (Momentum)";
     std::string errorMessage;
@@ -136,8 +146,8 @@ void Prediction::displayPredictionResults(
 }
 // self written code end
 
+//self written code start
 // Private helper methods
-
 double Prediction::calculateRSquaredDetailed(
     const std::vector<Candlestick>& data, 
     double slope, double intercept) noexcept {

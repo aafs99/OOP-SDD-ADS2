@@ -4,6 +4,10 @@
 #include <iomanip>
 #include <algorithm>
 
+/*self written code start (code built with reference to : 
+ https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
+ https://github.com/AriaFallah/csv-parser
+*/
 namespace DataFilter {
 
 namespace {

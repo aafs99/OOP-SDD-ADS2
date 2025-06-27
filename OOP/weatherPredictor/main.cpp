@@ -2,6 +2,8 @@
 #include <string>
 #include "ApplicationController.h"
 
+
+//self written code start
 /**
  * 
  * This program provides a command-line interface for analyzing historical
@@ -35,3 +37,5 @@ int main() {
         return 2;
     }
 }
+
+//self written code end

@@ -4,6 +4,12 @@
 #include <sstream>
 #include <iostream>
 
+/*self written code start (code built with reference to : 
+ https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
+ https://github.com/AriaFallah/csv-parser
+ https://github.com/tdulcet/Table-and-Graph-Libs
+ https://github.com/tdulcet/Table-and-Graph-Libs
+*/
 namespace DataLoader {
 
 std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::string& countryCode, 
@@ -166,3 +172,4 @@ std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::s
 }
 
 } // namespace DataLoader
+//self written code end

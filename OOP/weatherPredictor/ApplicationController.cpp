@@ -8,6 +8,7 @@
 #include <iostream>
 #include <exception>
 
+//self written code start
 ApplicationController::ApplicationController(const std::string& dataFilePath) 
     : dataFilePath_(dataFilePath) {
 }
@@ -369,3 +370,5 @@ void ApplicationController::displayPredictions(const std::vector<Candlestick>& d
     
     Prediction::displayPredictionResults(data, timeframe, country, startYear, endYear, config);
 }
+
+//self written code end

@@ -5,7 +5,9 @@
 #include <algorithm>
 #include <sstream>
 
-//self written code start
+/*self written code start (code built with reference to : 
+ https://github.com/KC1922/StockMarketDisplay-CPP/tree/main/StockProjectCPP
+*/
 //! TDL Output looks messy, replace txt with ANSI codes for better readability
 void PredictionChart::displayVerticalChart(
     const std::vector<Candlestick>& data,

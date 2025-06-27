@@ -5,6 +5,7 @@
 #include <vector>
 #include "Common.h"
 
+// self written code start
 class Candlestick;
 
 namespace UserInput {
@@ -70,3 +71,4 @@ namespace UserInput {
 }
 
 #endif
+// self written code end

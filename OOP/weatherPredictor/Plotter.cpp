@@ -6,7 +6,13 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
-//self written code start
+
+
+/*self written code start (code built with reference to : 
+ https://github.com/AriaFallah/csv-parser
+ https://github.com/tdulcet/Table-and-Graph-Libs
+ https://github.com/tdulcet/Table-and-Graph-Libs
+*/
 namespace {
     // ANSI color codes
     const std::string ANSI_COLOR_GREEN = "\033[32m";

@@ -7,6 +7,8 @@
 #include "Candlestick.h"
 #include "TemperatureRecord.h"
 
+
+//self written code start
 /**
  *  Main application controller that manages the analysis workflow
  * 
@@ -75,3 +77,4 @@ private:
 };
 
 #endif // APPLICATION_CONTROLLER_H
+// self written code end
