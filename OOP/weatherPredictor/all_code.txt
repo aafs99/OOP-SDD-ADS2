@@ -1,0 +1,3412 @@
+#ifndef APPLICATION_CONTROLLER_H
+#define APPLICATION_CONTROLLER_H
+
+#include <vector>
+#include <string>
+#include "Common.h"
+#include "Candlestick.h"
+#include "TemperatureRecord.h"
+
+/**
+ *  Main application controller that manages the analysis workflow
+ * 
+ * This class encapsulates the main business logic,
+ * separating it from the main() function for better organization and testability.
+ */
+class ApplicationController {
+public:
+    /**
+     *  Constructs the application controller with data file path
+     * @param dataFilePath Path to the CSV data file
+     */
+    explicit ApplicationController(const std::string& dataFilePath);
+    
+    /**
+     *  Runs the main application loop
+     * @return Exit code (0 for success, non-zero for error)
+     */
+    int run();
+
+private:
+    // Core workflow methods
+    bool performSingleAnalysis();
+    bool loadAndProcessData(const std::string& country, int startYear, int endYear, 
+                           TimeFrame timeframe, std::vector<Candlestick>& candlesticks);
+    void displayInitialResults(const std::vector<Candlestick>& candlesticks, 
+                              TimeFrame timeframe, const std::string& country,
+                              int startYear, int endYear);
+    bool handleFilteringWorkflow(std::vector<Candlestick>& dataForAnalysis,
+                                const std::vector<Candlestick>& originalData,
+                                TimeFrame timeframe, const std::string& country);
+    void handlePredictionWorkflow(const std::vector<Candlestick>& dataForAnalysis,
+                                 const std::vector<Candlestick>& originalData,
+                                 TimeFrame timeframe, const std::string& country,
+                                 int startYear, int endYear, bool wasFiltered);
+    
+    // Utility methods
+    void showWelcomeMessage();
+    void showFarewellMessage();
+    bool handleException(const std::exception& e, const std::string& context);
+    
+    // Member variables
+    std::string dataFilePath_;
+    
+    // Static helper methods
+    static std::vector<Candlestick> applyFilter(
+        std::vector<Candlestick> data,
+        FilterType filterType,
+        const std::string& startDate,
+        const std::string& endDate,
+        double minTemp,
+        double maxTemp,
+        bool uptrend,
+        double minVolatility
+    );
+    
+    static void displayChartAndTable(const std::vector<Candlestick>& data, 
+                                   TimeFrame timeframe, 
+                                   const std::string& country, 
+                                   const std::string& chartTitle = "");
+    
+    static void displayPredictions(const std::vector<Candlestick>& data, 
+                                 TimeFrame timeframe, 
+                                 const std::string& country, 
+                                 int startYear, int endYear);
+};
+
+#endif // APPLICATION_CONTROLLER_H#ifndef CANDLESTICK_H
+#define CANDLESTICK_H
+
+#include <string>
+
+class Candlestick {
+private:
+    std::string date_;
+    double open_;
+    double close_;
+    double high_;
+    double low_;
+
+public:
+    Candlestick();
+    Candlestick(const std::string& date, double open, double close, double high, double low);
+
+    // Getters
+    std::string getDate() const { return date_; }
+    double getOpen() const { return open_; }
+    double getClose() const { return close_; }
+    double getHigh() const { return high_; }
+    double getLow() const { return low_; }
+    
+    // Utility methods
+    bool isUptrend() const { return close_ >= open_; }
+    double getVolatility() const { return high_ - low_; }
+    
+    // 
+    /**
+     *  Gets the mean temperature for this period
+     * @return The average temperature (same as close value)
+     * @note Inthe temperature candlestick model, 'close' represents 
+     *       the calculated average temperature for the time period
+     */
+    double getMeanTemperature() const { return close_; }
+    
+    // Legacy method for backward compatibility
+    [[deprecated("Use getMeanTemperature() instead for clarity")]]
+    double getAverage() const { return close_; }
+};
+
+#endif#ifndef CANDLESTICK_CALCULATOR_H
+#define CANDLESTICK_CALCULATOR_H
+
+#include <vector>
+#include <string>
+#include "Candlestick.h"
+#include "TemperatureRecord.h"
+#include "Common.h"
+
+namespace CandlestickCalculator {
+    std::vector<Candlestick> computeCandlesticks(
+        const std::vector<TemperatureRecord>& records, 
+        TimeFrame timeframe
+    );
+    
+    // Helper functions
+    std::string getGroupKey(const std::string& dateTime, TimeFrame timeframe);
+    std::string formatDateLabel(const std::string& groupKey, TimeFrame timeframe);
+    void printCandlestickTable(const std::vector<Candlestick>& candlesticks);
+}
+
+#endif#ifndef COMMON_H
+#define COMMON_H
+
+#include <string>
+
+// Centralized constants
+namespace Constants {
+    const int MIN_YEAR = 1980;
+    const int MAX_YEAR = 2019;
+    const std::string DATE_FORMAT = "YYYY-MM-DD";
+    const std::string DATETIME_FORMAT = "YYYY-MM-DD HH:MM:SS";
+    
+    // Added constants to eliminate magic numbers
+    const double EPSILON = 1e-10;                    // For floating point comparisons
+    const double CHART_PADDING_RATIO = 0.1;         // 10% padding for chart display
+    const int CHART_WIDTH = 20;                     // Width of prediction comparison charts
+    const double STABILITY_SCALE_FACTOR = 5.0;      // Scaling factor for stability confidence
+    const double HIGH_CONFIDENCE_THRESHOLD = 0.7;   // Threshold for high confidence
+    const double MODERATE_CONFIDENCE_THRESHOLD = 0.4; // Threshold for moderate confidence
+    
+    // Chart display constants
+    const int Y_AXIS_WIDTH = 8;                     // Width of Y-axis labels
+    const int MAX_CHART_WIDTH = 120;                // Maximum chart width
+    const size_t PREFERRED_MAX_DISPLAY_POINTS = 60; // Preferred maximum data points to display
+    const size_t MODERATE_MAX_DISPLAY_POINTS = 100; // Moderate maximum data points
+    const size_t ABSOLUTE_MAX_DISPLAY_POINTS = 120; // Absolute maximum data points
+    const int MIN_CHARS_PER_LABEL = 6;              // Minimum characters per X-axis label
+    
+    // ENHANCED: New chart constants to eliminate magic numbers
+    const int ENHANCED_CHART_MIN_WIDTH = 50;        // Minimum enhanced chart width
+    const int ENHANCED_CHART_MAX_WIDTH = 80;        // Maximum enhanced chart width
+    const int ENHANCED_CHART_DEFAULT_WIDTH = 60;    // Default enhanced chart width
+    const double ENHANCED_CHART_PADDING_RATIO = 0.15; // Enhanced chart padding (15%)
+    const double MIN_CHART_PADDING = 1.0;           // Minimum padding in temperature units
+    const int VERTICAL_CHART_HEIGHT = 20;           // Default vertical chart height
+    const int VERTICAL_CHART_MAX_PERIODS = 40;      // Maximum periods shown in vertical chart
+    const int PERIOD_LABEL_INTERVAL = 5;            // Interval for period labels in vertical chart
+    const double TEMP_TOLERANCE_FACTOR = 0.5;       // Temperature tolerance for symbol placement
+    const int PREDICTION_VALUE_WIDTH = 6;           // Width for prediction value display
+    const double TEMP_RANGE_SANITY_CHECK = 100.0;   // Sanity check for temperature values
+    
+    // Prediction model constants
+    const size_t MIN_LINEAR_DATA_SIZE = 2;          // Minimum data points for linear regression
+    const size_t MIN_HEURISTIC_DATA_SIZE = 2;       // Minimum data points for heuristic model
+    const size_t MIN_MOVING_AVERAGE_DATA_SIZE = 1;  // Minimum data points for moving average
+    
+    // Table formatting constants
+    const int TABLE_SEPARATOR_WIDTH = 60;           // Width for table separators
+    const int DATE_COLUMN_WIDTH = 12;               // Width for date column
+    const int TEMP_COLUMN_WIDTH = 8;                // Width for temperature columns
+    const int CHANGE_COLUMN_WIDTH = 6;              // Width for change column
+    
+    // Section separator widths
+    const int SECTION_SEPARATOR_WIDTH_60 = 60;      // Standard section separator
+    const int ANALYSIS_SEPARATOR_WIDTH_65 = 65;     // Analysis section separator
+    const int VALIDATION_SEPARATOR_WIDTH_71 = 71;   // Validation results separator
+    const int VALIDATION_SEPARATOR_WIDTH_72 = 72;   // Validation section separator
+    const int CHART_HEADER_WIDTH_78 = 78;           // Chart header separator
+    const int ENHANCED_CHART_SEPARATOR_WIDTH_95 = 95; // Enhanced chart separator width
+    
+    // Number formatting constants
+    const int NUMBER_FORMAT_PRECISION = 5;          // Default precision for number formatting
+    const int TEMPERATURE_DISPLAY_PRECISION = 1;    // Precision for temperature display
+    const int PERIOD_LABEL_MAX_LENGTH = 4;          // Maximum length for period labels
+}
+
+// Common enums used across the application
+enum class TimeFrame { 
+    Daily, 
+    Monthly, 
+    Yearly 
+};
+
+enum class FilterType {
+    DateRange = 1,
+    TemperatureRange = 2,
+    Trend = 3,
+    Volatility = 4
+};
+
+// Utility functions
+namespace Utils {
+    inline std::string timeFrameToString(TimeFrame timeframe) {
+        switch (timeframe) {
+            case TimeFrame::Yearly:  return "Yearly";
+            case TimeFrame::Monthly: return "Monthly";
+            case TimeFrame::Daily:   return "Daily";
+            default: return "Unknown";
+        }
+    }
+}
+
+#endif#ifndef DATA_FILTER_H
+#define DATA_FILTER_H
+
+#include <vector>
+#include <string>
+#include "Candlestick.h"
+
+namespace DataFilter {
+    std::vector<Candlestick> filterByDateRange(
+        const std::vector<Candlestick>& data, 
+        const std::string& startDate, 
+        const std::string& endDate
+    );
+    
+    std::vector<Candlestick> filterByTemperatureRange(
+        const std::vector<Candlestick>& data, 
+        double minTemp, 
+        double maxTemp
+    );
+    
+    std::vector<Candlestick> filterByTrend(
+        const std::vector<Candlestick>& data, 
+        bool uptrend
+    );
+    
+    std::vector<Candlestick> filterByVolatility(
+        const std::vector<Candlestick>& data, 
+        double minVolatility
+    );
+    
+    void printFilterStats(size_t original, size_t filtered, const std::string& filterName);
+}
+
+#endif#ifndef DATA_LOADER_H
+#define DATA_LOADER_H
+
+#include <string>
+#include <vector>
+#include "TemperatureRecord.h"
+
+namespace DataLoader {
+    std::vector<TemperatureRecord> loadCSV(
+        const std::string& filename, 
+        const std::string& countryCode, 
+        int startYear, 
+        int endYear
+    );
+}
+
+#endif#ifndef PLOT_CONFIGURATION_H
+#define PLOT_CONFIGURATION_H
+
+#include <string>
+
+struct PlotConfiguration {
+    int candleWidth;
+    int candleSpacing;
+    std::string upTrendBody;
+    std::string downTrendBody;
+    std::string wickShape;
+    std::string emptySpace;
+    std::string spacingStr;
+
+    PlotConfiguration(int width = 5, int spacing = 2);
+    void update();
+};
+
+// Compression levels for different display densities
+struct CompressionLevel {
+    int candleWidth;
+    int candleSpacing;
+    std::string description;
+};
+
+#endif#ifndef PLOTTER_H
+#define PLOTTER_H
+
+#include <vector>
+#include <string>
+#include "Candlestick.h"
+#include "Common.h"
+#include "PlotConfiguration.h"
+
+namespace Plotter {
+    /**
+     *  Plots a vector of Candlestick data to the console.
+     * * This function handles the entire process of rendering the chart, including
+     * intelligent sampling of data, optimal compression for display, and printing
+     * the Y-axis, X-axis, and a summary.
+     * * @param candlesticks The vector of Candlestick objects to plot.
+     * @param timeframe The timeframe (Daily, Monthly, Yearly) of the data.
+     * @param chartHeight The desired height of the chart in character rows.
+     */
+    void plotCandlesticks(
+        const std::vector<Candlestick>& candlesticks, 
+        TimeFrame timeframe, 
+        int chartHeight = 20
+    );
+}
+
+#endif#ifndef PREDICTION_H
+#define PREDICTION_H
+
+#include <vector>
+#include <string>
+#include <functional>
+#include <string_view>
+#include "Candlestick.h"
+#include "Common.h"
+
+/**
+ * Structure to hold prediction results with confidence metrics
+ */
+struct PredictionResult {
+    double predictionValue{0.0};
+    double confidenceMetric{0.0};
+    std::string modelName;
+    bool isValid{false};
+    std::string errorMessage;
+    std::string confidenceDescription;
+    
+    // Constructor for successful prediction
+    PredictionResult(double prediction, double confidence, std::string_view name, 
+                    std::string_view confDesc = "") 
+        : predictionValue(prediction), confidenceMetric(confidence), modelName(name),
+          isValid(true), confidenceDescription(confDesc) {}
+    
+    // Constructor for failed prediction
+    PredictionResult(std::string_view error, std::string_view name)
+        : modelName(name), isValid(false), errorMessage(error) {}
+    
+    // Default constructors
+    PredictionResult() = default;
+    PredictionResult(const PredictionResult&) = default;
+    PredictionResult& operator=(const PredictionResult&) = default;
+    PredictionResult(PredictionResult&&) = default;
+    PredictionResult& operator=(PredictionResult&&) = default;
+};
+
+/**
+ * Configuration for prediction display
+ */
+struct PredictionConfig {
+    bool showValidation{true};
+    bool showChart{true};
+    int movingAverageWindow{3};
+};
+
+/**
+ * Core prediction algorithms
+ */
+class Prediction {
+public:
+    // Main prediction methods
+    static PredictionResult predictLinearWithConfidence(const std::vector<Candlestick>& data);
+    static PredictionResult predictMovingAverageWithConfidence(const std::vector<Candlestick>& data, int windowSize = 3);
+    static PredictionResult predictHeuristicWithConfidence(const std::vector<Candlestick>& data);
+
+    // Main display method
+    static void displayPredictionResults(
+        const std::vector<Candlestick>& data,
+        TimeFrame timeframe,
+        std::string_view country,
+        int startYear, int endYear,
+        const PredictionConfig& config = {}
+    );
+    // Utility methods
+    static std::string getConfidenceLevel(double confidence) noexcept;
+    static std::string determineNextPeriod(const std::vector<Candlestick>& data, TimeFrame timeframe, int endYear);
+
+private:
+    // Statistical calculation methods
+    static double calculateRSquaredDetailed(const std::vector<Candlestick>& data, double slope, double intercept) noexcept;
+    static double calculateStabilityConfidence(const std::vector<Candlestick>& data, int windowSize) noexcept;
+    static double calculateConsistencyConfidence(const std::vector<Candlestick>& data) noexcept;
+
+    // Statistical utilities
+    template<typename Container>
+    static double calculateMean(const Container& values) noexcept;
+
+    template<typename Container>
+    static double calculateStandardDeviation(const Container& values, double mean) noexcept;
+
+    // Input validation
+    static bool validateDataSize(const std::vector<Candlestick>& data, size_t minSize, std::string& errorMessage) noexcept;
+    static bool validateWindowSize(int windowSize, size_t dataSize, std::string& errorMessage) noexcept;
+};
+
+// Template implementations
+template<typename Container>
+double Prediction::calculateMean(const Container& values) noexcept {
+    if (values.empty()) return 0.0;
+    
+    double sum = 0.0;
+    for (const auto& value : values) {
+        sum += value;
+    }
+    return sum / values.size();
+}
+
+template<typename Container>
+double Prediction::calculateStandardDeviation(const Container& values, double mean) noexcept {
+    if (values.size() < 2) return 0.0;
+    
+    double sumSquaredDiffs = 0.0;
+    for (const auto& value : values) {
+        const double diff = value - mean;
+        sumSquaredDiffs += diff * diff;
+    }
+    
+    return std::sqrt(sumSquaredDiffs / (values.size() - 1));
+}
+
+#endif // PREDICTION_H#ifndef PREDICTION_CHART_H
+#define PREDICTION_CHART_H
+
+#include <vector>
+#include <string>
+#include <string_view>
+#include "Prediction.h"
+#include "Candlestick.h"
+#include "Common.h"
+
+/**
+ * Handles vertical chart display for prediction visualization
+ */
+class PredictionChart {
+public:
+    // Main chart display method
+    static void displayVerticalChart(
+        const std::vector<Candlestick>& data,
+        TimeFrame timeframe,
+        std::string_view country,
+        int startYear, int endYear
+    );
+
+private:
+    // Chart generation methods
+    static std::vector<std::vector<PredictionResult>> generateAllRollingPredictions(
+        const std::vector<Candlestick>& data
+    );
+    
+    static std::vector<PredictionResult> generateRollingPredictions(
+        const std::vector<Candlestick>& data,
+        const std::function<PredictionResult(const std::vector<Candlestick>&)>& modelFunction,
+        int startIndex
+    );
+
+    // Chart display helpers
+    static void displayChartHeader(const std::vector<Candlestick>& data, std::string_view country, 
+                                  int startYear, int endYear);
+    static void displayChart(const std::vector<Candlestick>& data, 
+                           const std::vector<std::vector<PredictionResult>>& allPredictions,
+                           TimeFrame timeframe, int startYear);
+    static void displayChartFooter();
+    static void displayAccuracyAnalysis(const std::vector<Candlestick>& data,
+                                       const std::vector<std::vector<PredictionResult>>& allPredictions);
+
+    // Chart utility methods
+    static char getSymbolAtPosition(const std::vector<Candlestick>& data,
+                                   const std::vector<std::vector<PredictionResult>>& allPredictions,
+                                   size_t periodIndex, double currentTemp, double tempPerRow);
+    static void calculateTemperatureRange(const std::vector<Candlestick>& data,
+                                         const std::vector<std::vector<PredictionResult>>& allPredictions,
+                                         double& minTemp, double& maxTemp);
+    static std::string formatPeriodLabel(size_t index, TimeFrame timeframe, int startYear);
+    
+    // Statistical utilities
+    template<typename Container>
+    static double calculateMean(const Container& values) noexcept;
+    
+    static std::string formatDouble(double value, int precision = 2);
+};
+
+// Template implementation
+template<typename Container>
+double PredictionChart::calculateMean(const Container& values) noexcept {
+    if (values.empty()) return 0.0;
+    
+    double sum = 0.0;
+    for (const auto& value : values) {
+        sum += value;
+    }
+    return sum / values.size();
+}
+
+#endif // PREDICTION_CHART_H#ifndef PREDICTION_DISPLAY_H
+#define PREDICTION_DISPLAY_H
+
+#include <vector>
+#include <string>
+#include <string_view>
+#include "Prediction.h"
+#include "Candlestick.h"
+#include "Common.h"
+
+/**
+ * Handles all prediction display and formatting functionality
+ */
+class PredictionDisplay {
+public:
+    // Main display method
+    static void displayEnhancedResults(
+        const std::vector<Candlestick>& data,
+        TimeFrame timeframe,
+        std::string_view country,
+        int startYear, int endYear,
+        const PredictionConfig& config
+    );
+
+private:
+    // Display components
+    static void displayHeader(std::string_view country, int startYear, int endYear, 
+                             TimeFrame timeframe, size_t dataSize, const std::string& nextPeriod);
+    static void displayPredictionSummary(const std::vector<PredictionResult>& results, const std::string& nextPeriod);
+    static void displayPredictionTable(const std::vector<PredictionResult>& results, const std::string& nextPeriod);
+    static void displayRecommendation(const std::vector<PredictionResult>& results);
+
+    // Formatting utilities
+    static std::string formatTemperature(double temp, int precision = 1);
+    static std::string formatConfidence(double confidence, int precision = 3);
+    static std::string formatDouble(double value, int precision = 2);
+};
+
+#endif // PREDICTION_DISPLAY_H#ifndef PREDICTION_VALIDATION_H
+#define PREDICTION_VALIDATION_H
+
+#include <vector>
+#include <string>
+#include <functional>
+#include "Prediction.h"
+#include "Candlestick.h"
+
+/**
+ * Structure to hold cross-validation results
+ */
+struct ValidationResult {
+    double meanAbsoluteError{0.0};
+    double meanSquaredError{0.0}; 
+    double maxError{0.0};
+    double minError{0.0};
+    int validPredictions{0};
+    int totalAttempts{0};
+    bool isValid{false};
+    std::string errorMessage;
+    
+    // Calculated properties
+    [[nodiscard]] double getRMSE() const noexcept { 
+        return std::sqrt(meanSquaredError); 
+    }
+    
+    [[nodiscard]] double getSuccessRate() const noexcept {
+        return totalAttempts > 0 ? 
+               static_cast<double>(validPredictions) / totalAttempts * 100.0 : 0.0;
+    }
+};
+
+/**
+ * Function pointer type for prediction models
+ */
+using PredictionFunction = std::function<PredictionResult(const std::vector<Candlestick>&)>;
+
+/**
+ * Handles cross-validation of prediction models
+ */
+class PredictionValidation {
+public:
+    // Validation methods
+    static ValidationResult validateModel(
+        const std::vector<Candlestick>& data,
+        const PredictionFunction& modelFunction,
+        int minTrainingSize = 2
+    );
+
+    static std::vector<ValidationResult> validateAllModels(const std::vector<Candlestick>& data);
+
+    // Display methods
+    static void displayValidationResults(const std::vector<Candlestick>& data);
+
+private:
+    // Helper methods
+    template<typename Container>
+    static double calculateMean(const Container& values) noexcept;
+    
+    static std::string formatDouble(double value, int precision = 2);
+};
+
+// Template implementation
+template<typename Container>
+double PredictionValidation::calculateMean(const Container& values) noexcept {
+    if (values.empty()) return 0.0;
+    
+    double sum = 0.0;
+    for (const auto& value : values) {
+        sum += value;
+    }
+    return sum / values.size();
+}
+
+#endif // PREDICTION_VALIDATION_H#ifndef TEMPERATURE_RECORD_H
+#define TEMPERATURE_RECORD_H
+
+#include <string>
+
+struct TemperatureRecord {
+    std::string date;
+    double temperature;
+    
+    TemperatureRecord() : temperature(0.0) {}
+    TemperatureRecord(const std::string& d, double t) : date(d), temperature(t) {}
+};
+
+#endif#ifndef USER_INPUT_H
+#define USER_INPUT_H
+
+#include <string>
+#include <vector>
+#include "Common.h"
+
+class Candlestick;
+
+namespace UserInput {
+    // Main input functions
+    std::string getCountryCode();
+    void getYearRange(int& startYear, int& endYear);
+    TimeFrame getTimeFrame();
+    bool askForFiltering();
+    bool askForPredictions();
+    bool askToContinue(const std::string& operation);
+    
+    // Filter-related functions
+    bool getFilterCriteria(
+        const std::vector<Candlestick>& candlesticks, 
+        TimeFrame timeframe,
+        FilterType& filterType, 
+        std::string& startDate, 
+        std::string& endDate,
+        double& minTemp, 
+        double& maxTemp, 
+        bool& uptrend, 
+        double& minVolatility
+    );
+    
+    // Display functions
+    void displayAvailableCountries();
+    
+    // Screen management functions
+    void clearScreen();
+    void waitForUser();
+    bool askToAnalyzeAnotherCountry();
+    bool askForPredictionChart();
+
+    // Export functions
+    void exportToFile(const std::string& filename, const std::vector<Candlestick>& data);
+    bool askForDataExport(const std::vector<Candlestick>& data, const std::string& defaultPrefix = "temperature_data");     
+    
+    // Internal functions
+    namespace Internal {
+        void displayAvailableTimeFrames();
+        bool getDateRangeFilter(
+            const std::vector<Candlestick>& candlesticks, 
+            TimeFrame timeframe,
+            std::string& startDate, 
+            std::string& endDate
+        );
+        bool getTemperatureRangeFilter(
+            const std::vector<Candlestick>& candlesticks,
+            double& minTemp, 
+            double& maxTemp
+        );
+        bool getTrendFilter(bool& uptrend);
+        bool getVolatilityFilter(
+            const std::vector<Candlestick>& candlesticks, 
+            double& minVolatility
+        );
+        
+        std::string toUpperCase(const std::string& str);
+        bool isValidCountryCode(const std::string& country);
+        void clearInputBuffer();
+        int getYear(const std::string& prompt, int minYear, int maxYear);
+    }
+}
+
+#endif#include "ApplicationController.h"
+#include "DataLoader.h"
+#include "CandlestickCalculator.h"
+#include "Plotter.h"
+#include "DataFilter.h"
+#include "UserInput.h"
+#include "Prediction.h"
+#include <iostream>
+#include <exception>
+
+ApplicationController::ApplicationController(const std::string& dataFilePath) 
+    : dataFilePath_(dataFilePath) {
+}
+
+int ApplicationController::run() {
+    showWelcomeMessage();
+    
+    while (true) {
+        try {
+            if (!performSingleAnalysis()) {
+                break; // User chose to exit
+            }
+        } catch (const std::bad_alloc& e) {
+            if (!handleException(e, "Memory Error")) break;
+        } catch (const std::ios_base::failure& e) {
+            if (!handleException(e, "File I/O Error")) break;
+        } catch (const std::exception& e) {
+            if (!handleException(e, "General Error")) break;
+        } catch (...) {
+            std::cerr << "\n An unexpected system error occurred." << std::endl;
+            if (!UserInput::askToContinue("try again")) break;
+            UserInput::clearScreen();
+        }
+    }
+    
+    showFarewellMessage();
+    return 0;
+}
+
+bool ApplicationController::performSingleAnalysis() {
+    UserInput::clearScreen();
+    
+    // Get user input
+    std::cout << "=== STARTING NEW ANALYSIS ===\n\n";
+    
+    std::string country = UserInput::getCountryCode();
+    UserInput::clearScreen();
+    
+    int startYear, endYear;
+    UserInput::getYearRange(startYear, endYear);
+    UserInput::clearScreen();
+    
+    TimeFrame timeframe = UserInput::getTimeFrame();
+    UserInput::clearScreen();
+    
+    // Load and process data
+    std::vector<Candlestick> candlesticks;
+    if (!loadAndProcessData(country, startYear, endYear, timeframe, candlesticks)) {
+        UserInput::waitForUser();
+        return true; // Continue to next analysis
+    }
+    
+    // Display initial results
+    displayInitialResults(candlesticks, timeframe, country, startYear, endYear);
+    
+    // Handle filtering workflow
+    std::vector<Candlestick> dataForAnalysis = candlesticks;
+    bool wasFiltered = handleFilteringWorkflow(dataForAnalysis, candlesticks, timeframe, country);
+    
+    // Handle prediction workflow
+    handlePredictionWorkflow(dataForAnalysis, candlesticks, timeframe, country, 
+                           startYear, endYear, wasFiltered);
+
+    std::string exportPrefix = country + "_" + std::to_string(startYear) + "-" + std::to_string(endYear) + 
+    "_" + Utils::timeFrameToString(timeframe);
+    std::transform(exportPrefix.begin(), exportPrefix.end(), exportPrefix.begin(), ::tolower);
+    
+    if (UserInput::askForDataExport(dataForAnalysis, exportPrefix)) {
+        UserInput::waitForUser();
+    }
+    
+    // Ask if user wants to continue
+    return UserInput::askToAnalyzeAnotherCountry();
+}
+
+bool ApplicationController::loadAndProcessData(const std::string& country, int startYear, int endYear,
+                                             TimeFrame timeframe, std::vector<Candlestick>& candlesticks) {
+    // Load temperature records
+    std::cout << "=== LOADING DATA ===\n";
+    std::cout << "Loading temperature data for " << country 
+              << " from " << startYear << " to " << endYear << "...\n";
+    
+    std::vector<TemperatureRecord> records = DataLoader::loadCSV(dataFilePath_, country, startYear, endYear);
+    
+    if (records.empty()) {
+        std::cout << "\n Error: No data found for the specified criteria.\n";
+        std::cout << "Possible issues:\n";
+        std::cout << "  • Country code '" << country << "' might not exist in the dataset\n";
+        std::cout << "  • Year range " << startYear << "-" << endYear << " might have no data\n";
+        std::cout << "  • Data file might be corrupted or in wrong format\n";
+        std::cout << "\nPlease try different parameters.\n";
+        return false;
+    }
+    
+    std::cout << " Successfully loaded " << records.size() << " temperature records\n";
+    
+    // Process into candlesticks
+    std::cout << "\n=== PROCESSING DATA ===\n";
+    std::cout << "Computing candlestick aggregation using " 
+              << Utils::timeFrameToString(timeframe) << " timeframe...\n";
+    
+    candlesticks = CandlestickCalculator::computeCandlesticks(records, timeframe);
+    
+    if (candlesticks.empty()) {
+        std::cout << " Error: Failed to compute candlestick data from records.\n";
+        return false;
+    }
+    
+    std::cout << " Successfully computed " << candlesticks.size() << " candlestick entries.\n";
+    
+    // Data quality warnings
+    if (records.size() < 10) {
+        std::cout << "⚠ Warning: Very limited data (" << records.size() 
+                  << " records). Results may be less reliable.\n";
+    }
+    
+    UserInput::waitForUser();
+    return true;
+}
+
+void ApplicationController::displayInitialResults(const std::vector<Candlestick>& candlesticks,
+                                                 TimeFrame timeframe, const std::string& country,
+                                                 int startYear, int endYear) {
+    UserInput::clearScreen();
+    
+    std::string chartTitle = Utils::timeFrameToString(timeframe) + 
+                           " Candlestick Chart for " + country + 
+                           " (" + std::to_string(startYear) + "-" + std::to_string(endYear) + ")";
+    
+    displayChartAndTable(candlesticks, timeframe, country, chartTitle);
+}
+
+bool ApplicationController::handleFilteringWorkflow(std::vector<Candlestick>& dataForAnalysis,
+                                                   const std::vector<Candlestick>& originalData,
+                                                   TimeFrame timeframe, const std::string& country) {
+    if (!UserInput::askForFiltering()) {
+        return false;
+    }
+
+    UserInput::clearScreen();
+    int filtersApplied = 0;
+    
+    while (true) {
+        FilterType filterType;
+        std::string startDate, endDate;
+        double minTemp, maxTemp, minVolatility;
+        bool uptrend;
+        
+        // Show current status if filters have been applied
+        if (filtersApplied > 0) {
+            std::cout << "=== CURRENT FILTERING STATUS ===\n";
+            std::cout << "Filters applied: " << filtersApplied << "\n";
+            std::cout << "Current dataset size: " << dataForAnalysis.size() << " candlesticks\n";
+            std::cout << "Original dataset size: " << originalData.size() << " candlesticks\n\n";
+            
+            std::cout << "Choose filtering mode:\n";
+            std::cout << "  1. Apply to current filtered data (cumulative)\n";
+            std::cout << "  2. Apply to original data (fresh filter)\n";
+            
+            int mode;
+            while (true) {
+                std::cout << "Enter mode (1-2): ";
+                if (!(std::cin >> mode) || (mode != 1 && mode != 2)) {
+                    std::cout << "Error: Please enter 1 or 2.\n";
+                    UserInput::Internal::clearInputBuffer();
+                    continue;
+                }
+                break;
+            }
+            
+            if (!UserInput::getFilterCriteria(originalData, timeframe, filterType, 
+                                            startDate, endDate, minTemp, maxTemp, 
+                                            uptrend, minVolatility)) {
+                continue;
+            }
+            
+            UserInput::clearScreen();
+            
+            // Apply filter to appropriate source data
+            std::vector<Candlestick> sourceData = (mode == 1) ? dataForAnalysis : originalData;
+            std::vector<Candlestick> filtered = applyFilter(
+                std::move(sourceData), filterType, startDate, endDate, 
+                minTemp, maxTemp, uptrend, minVolatility
+            );
+            
+            if (!filtered.empty()) {
+                dataForAnalysis = std::move(filtered);
+                filtersApplied = (mode == 2) ? 1 : filtersApplied + 1;
+                
+                std::string chartTitle = "Filtered " + Utils::timeFrameToString(timeframe) + 
+                                       " Chart for " + country + " (Filter " + 
+                                       std::to_string(filtersApplied) + " applied)";
+                displayChartAndTable(dataForAnalysis, timeframe, country, chartTitle);
+            } else {
+                std::cout << "\n⚠ Filter resulted in no data. Keeping previous dataset.\n";
+                displayChartAndTable(dataForAnalysis, timeframe, country);
+            }
+        } else {
+            // First filter
+            if (!UserInput::getFilterCriteria(originalData, timeframe, filterType, 
+                                            startDate, endDate, minTemp, maxTemp, 
+                                            uptrend, minVolatility)) {
+                continue;
+            }
+            
+            UserInput::clearScreen();
+            
+            std::vector<Candlestick> filtered = applyFilter(
+                originalData, filterType, startDate, endDate, 
+                minTemp, maxTemp, uptrend, minVolatility
+            );
+            
+            if (!filtered.empty()) {
+                dataForAnalysis = std::move(filtered);
+                filtersApplied = 1;
+                
+                std::string chartTitle = "Filtered " + Utils::timeFrameToString(timeframe) + 
+                                       " Chart for " + country + " (Filter 1 applied)";
+                displayChartAndTable(dataForAnalysis, timeframe, country, chartTitle);
+            } else {
+                std::cout << "\n⚠ Filter resulted in no data. Showing original view.\n";
+                displayChartAndTable(dataForAnalysis, timeframe, country);
+            }
+        }
+
+        if (!UserInput::askToContinue("apply another filter")) {
+            break;
+        }
+        UserInput::clearScreen();
+    }
+    
+    return filtersApplied > 0;
+}
+
+void ApplicationController::handlePredictionWorkflow(const std::vector<Candlestick>& dataForAnalysis,
+                                                   const std::vector<Candlestick>& originalData,
+                                                   TimeFrame timeframe, const std::string& country,
+                                                   int startYear, int endYear, bool wasFiltered) {
+    if (!UserInput::askForPredictions()) {
+        return;
+    }
+
+    UserInput::clearScreen();
+    
+    displayPredictions(dataForAnalysis, timeframe, country, startYear, endYear);
+    
+    // Option to see predictions for original data if filters were applied
+    if (wasFiltered && dataForAnalysis.size() != originalData.size()) {
+        if (UserInput::askToContinue("see predictions for the complete (unfiltered) dataset")) {
+            UserInput::clearScreen();
+            std::cout << "=== Predictions for Complete (Unfiltered) Dataset ===\n";
+            displayPredictions(originalData, timeframe, country, startYear, endYear);
+        }
+    }
+}
+
+void ApplicationController::showWelcomeMessage() {
+    UserInput::clearScreen();
+    std::cout << "=================================================================\n";
+    std::cout << "              TEMPERATURE ANALYSIS TOOL WITH PREDICTIONS\n";
+    std::cout << "                    (1980-2019 Historical Data)\n";
+    std::cout << "=================================================================\n";
+    std::cout << "\nWelcome! This tool helps you analyze and predict temperature trends\n";
+    std::cout << "across European countries using historical climate data.\n\n";
+    
+    UserInput::waitForUser();
+}
+
+void ApplicationController::showFarewellMessage() {
+    UserInput::clearScreen();
+    std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
+    std::cout << "   THANK YOU FOR USING THE TEMPERATURE ANALYSIS TOOL!\n";
+    std::cout << "                    Have a great day! \n";
+    std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n\n";
+}
+
+bool ApplicationController::handleException(const std::exception& e, const std::string& context) {
+    std::cerr << "\n " << context << ": " << e.what() << std::endl;
+    
+    if (context == "Memory Error") {
+        std::cout << "The dataset might be too large for available memory.\n";
+        std::cout << "Try using a smaller date range or different timeframe.\n";
+    } else if (context == "File I/O Error") {
+        std::cout << "There was a problem reading the data file.\n";
+    } else {
+        std::cout << "\nThis might be due to:\n";
+        std::cout << "  • Invalid input parameters\n";
+        std::cout << "  • Data processing issues\n";
+        std::cout << "  • Memory constraints\n";
+    }
+    
+    bool continueApp = UserInput::askToContinue("try again with different parameters");
+    if (continueApp) {
+        UserInput::clearScreen();
+    }
+    return continueApp;
+}
+
+// Static helper methods
+std::vector<Candlestick> ApplicationController::applyFilter(
+    std::vector<Candlestick> data,
+    FilterType filterType,
+    const std::string& startDate,
+    const std::string& endDate,
+    double minTemp,
+    double maxTemp,
+    bool uptrend,
+    double minVolatility) {
+    
+    switch (filterType) {
+        case FilterType::DateRange:
+            return DataFilter::filterByDateRange(data, startDate, endDate);
+        case FilterType::TemperatureRange:
+            return DataFilter::filterByTemperatureRange(data, minTemp, maxTemp);
+        case FilterType::Trend:
+            return DataFilter::filterByTrend(data, uptrend);
+        case FilterType::Volatility:
+            return DataFilter::filterByVolatility(data, minVolatility);
+        default:
+            std::cout << "Error: Invalid filter type.\n";
+            return data;
+    }
+}
+
+void ApplicationController::displayChartAndTable(const std::vector<Candlestick>& data, 
+                                               TimeFrame timeframe, 
+                                               const std::string& country, 
+                                               const std::string& chartTitle) {
+    if (!chartTitle.empty()) {
+        std::cout << "\n==== " << chartTitle << " ====\n\n";
+    }
+    Plotter::plotCandlesticks(data, timeframe, 20);
+    
+    if (UserInput::askToContinue("view the detailed candlestick data table")) {
+        CandlestickCalculator::printCandlestickTable(data);
+        UserInput::waitForUser();
+    }
+}
+
+void ApplicationController::displayPredictions(const std::vector<Candlestick>& data, 
+                                             TimeFrame timeframe, 
+                                             const std::string& country, 
+                                             int startYear, int endYear) {
+    if (data.empty()) {
+        std::cout << "Cannot generate predictions: No data available.\n";
+        return;
+    }
+
+    if (data.size() < 2) {
+        std::cout << "Cannot generate predictions: Need at least 2 data points for analysis.\n";
+        std::cout << "Current dataset has " << data.size() << " point(s).\n";
+        return;
+    }
+
+    // Use the enhanced prediction display with configuration
+    PredictionConfig config;
+    config.showValidation = (data.size() >= 4);
+    config.showChart = (data.size() >= 4);
+    
+    Prediction::displayPredictionResults(data, timeframe, country, startYear, endYear, config);
+}#include "Candlestick.h"
+
+Candlestick::Candlestick() : date_(""), open_(0), close_(0), high_(0), low_(0) {}
+
+Candlestick::Candlestick(const std::string& date, double open, double close, double high, double low)
+    : date_(date), open_(open), close_(close), high_(high), low_(low) {}#include "CandlestickCalculator.h"
+#include "Common.h"
+#include <algorithm>
+#include <map>
+#include <iostream>
+#include <iomanip>
+
+namespace CandlestickCalculator {
+
+/**
+ * This function groups temperature records by the specified timeframe, calculates
+ * the open, close, high, and low values for each group, and returns them as a
+ * vector of Candlestick objects. 
+ * 
+ * @param records A vector of TemperatureRecord structs.
+ * @param timeframe The time frame (Yearly, Monthly, Daily) to group data by.
+ * @return A vector of Candlestick objects.
+ */
+std::vector<Candlestick> computeCandlesticks(const std::vector<TemperatureRecord>& records, TimeFrame timeframe) {
+    std::vector<Candlestick> candlesticks;
+    if (records.empty()) {
+        return candlesticks;
+    }
+
+    std::vector<TemperatureRecord> sortedRecords;
+    sortedRecords.reserve(records.size());
+    for (const auto& record : records) {
+        sortedRecords.emplace_back(record);
+    }
+    
+    std::sort(sortedRecords.begin(), sortedRecords.end(), 
+              [](const TemperatureRecord& a, const TemperatureRecord& b) {
+                  return a.date < b.date;
+              });
+
+    // Group records by the specified timeframe - using ordered map to maintain chronological order
+    std::map<std::string, std::vector<double>> groupedData;
+    
+    for (const auto& record : sortedRecords) {
+        std::string groupKey = getGroupKey(record.date, timeframe);
+        if (!groupKey.empty()) {
+            auto& temperatures = groupedData[groupKey];
+            temperatures.emplace_back(record.temperature);
+        }
+    }
+
+    // Reserve space for candlesticks to avoid reallocations
+    candlesticks.reserve(groupedData.size());
+
+    // Track previous period's average for correct "open" calculation
+    double previousPeriodAverage = 0.0;
+    bool hasPreviousPeriod = false;
+
+    // Process each group to create a candlestick
+    for (const auto& group : groupedData) {
+        const std::string& dateKey = group.first;
+        const std::vector<double>& temperatures = group.second;
+        
+        if (temperatures.empty()) continue;
+        
+        double sum = 0.0;
+        double high = temperatures[0];
+        double low = temperatures[0];
+        
+        for (double temp : temperatures) {
+            sum += temp;
+            if (temp > high) high = temp;
+            if (temp < low) low = temp;
+        }
+        
+        // Calculate current period's average temperature
+        double currentPeriodAverage = sum / temperatures.size();
+        
+        // Use previous period's average as "open"
+        // For the first period, use the current period's average as both open and close
+        double open = hasPreviousPeriod ? previousPeriodAverage : currentPeriodAverage;
+        
+        // Close is the average temperature for the current period
+        double close = currentPeriodAverage;
+        
+        std::string candlestickDate = formatDateLabel(dateKey, timeframe);
+        
+        // Use emplace_back to construct in place
+        candlesticks.emplace_back(std::move(candlestickDate), open, close, high, low);
+        
+        // Update for next iteration
+        previousPeriodAverage = currentPeriodAverage;
+        hasPreviousPeriod = true;
+    }
+    
+    return candlesticks;
+}
+
+/**
+ *  Generates a key for grouping records based on the timeframe.
+ * @param dateTime A string representing the date and time (e.g., "YYYY-MM-DD HH:MM:SS").
+ * @param timeframe The timeframe for grouping.
+ * @return A string key (e.g., "YYYY" for Yearly, "YYYY-MM" for Monthly).
+ */
+std::string getGroupKey(const std::string& dateTime, TimeFrame timeframe) {
+    if (dateTime.length() < 10) {
+        return ""; // Invalid date format
+    }
+    
+    std::string year = dateTime.substr(0, 4);
+    std::string month = dateTime.substr(5, 2);
+    std::string day = dateTime.substr(8, 2);
+    
+    switch (timeframe) {
+        case TimeFrame::Yearly:
+            return year;
+        case TimeFrame::Monthly:
+            return year + "-" + month;
+        case TimeFrame::Daily:
+            return year + "-" + month + "-" + day;
+        default:
+            return year; // Default case
+    }
+}
+
+/**
+ *  Formats the group key into a standardized date label.
+ * @param groupKey The key generated by getGroupKey.
+ * @param timeframe The timeframe used for grouping.
+ * @return A formatted date string (e.g., "YYYY-01-01").
+ */
+std::string formatDateLabel(const std::string& groupKey, TimeFrame timeframe) {
+    switch (timeframe) {
+        case TimeFrame::Yearly:
+            return groupKey + "-01-01"; // Represents the start of the year
+        case TimeFrame::Monthly:
+            return groupKey + "-01"; // Represents the start of the month
+        case TimeFrame::Daily:
+            return groupKey;
+        default:
+            return groupKey + "-01-01"; // Default case
+    }
+}
+
+/**
+ *  Prints a formatted table of candlestick data to the console.
+ * This is a display function and should be called separately from the
+ * data computation logic.
+ * @param candlesticks A vector of Candlestick objects to display.
+ */
+void printCandlestickTable(const std::vector<Candlestick>& candlesticks) {
+    if (candlesticks.empty()) {
+        std::cout << "No candlestick data to display.\n";
+        return;
+    }
+    
+    // Table Header
+    std::cout << "\n=== Candlestick Data Table ===\n";
+    std::cout << std::left << std::setw(Constants::DATE_COLUMN_WIDTH) << "Date"
+              << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << "Open"
+              << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << "Close"
+              << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << "High"
+              << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << "Low"
+              << "| " << std::setw(Constants::CHANGE_COLUMN_WIDTH) << "Change" << "\n";
+    std::cout << std::string(Constants::TABLE_SEPARATOR_WIDTH, '-') << "\n";
+    
+    // Table Body
+    for (const auto& candle : candlesticks) {
+        std::string change = candle.isUptrend() ? "UP" : "DOWN";
+        
+        std::cout << std::left << std::setw(Constants::DATE_COLUMN_WIDTH) << candle.getDate()
+                  << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << std::fixed << std::setprecision(2) << candle.getOpen()
+                  << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << std::fixed << std::setprecision(2) << candle.getClose()
+                  << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << std::fixed << std::setprecision(2) << candle.getHigh()
+                  << "| " << std::setw(Constants::TEMP_COLUMN_WIDTH) << std::fixed << std::setprecision(2) << candle.getLow()
+                  << "| " << std::setw(Constants::CHANGE_COLUMN_WIDTH) << change << "\n";
+    }
+    std::cout << "\n";
+}
+
+} // namespace CandlestickCalculator#include "DataFilter.h"
+#include "Common.h"
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
+
+namespace DataFilter {
+
+namespace {
+    // Helper function to reduce code duplication for input validation
+    bool validateFilterInput(const std::vector<Candlestick>& data, const std::string& filterType) {
+        if (data.empty()) {
+            std::cout << "Warning: No data provided for " << filterType << " filtering.\n";
+            return false;
+        }
+        return true;
+    }
+    
+    // Helper function to handle empty results and print stats
+    void handleFilterResults(const std::vector<Candlestick>& filtered, size_t originalSize, 
+                            const std::string& filterName, const std::string& warningMessage = "") {
+        printFilterStats(originalSize, filtered.size(), filterName);
+        
+        if (filtered.empty() && !warningMessage.empty()) {
+            std::cout << "Warning: " << warningMessage << "\n";
+        }
+    }
+    
+    // Template function to reduce duplication in filter implementations
+    template<typename PredicateFunc>
+    std::vector<Candlestick> applyFilter(const std::vector<Candlestick>& data, 
+                                        const std::string& filterType,
+                                        const std::string& filterName,
+                                        const std::string& warningMessage,
+                                        PredicateFunc predicate) {
+        std::vector<Candlestick> filtered;
+        
+        if (!validateFilterInput(data, filterType)) {
+            return filtered;
+        }
+        
+        const size_t originalSize = data.size();
+        
+        // Reserve space to avoid reallocations
+        filtered.reserve(data.size());
+        
+        // Use copy_if for better performance
+        std::copy_if(data.begin(), data.end(), std::back_inserter(filtered), predicate);
+        
+        handleFilterResults(filtered, originalSize, filterName, warningMessage);
+        
+        return filtered;
+    }
+}
+
+std::vector<Candlestick> filterByDateRange(const std::vector<Candlestick>& data, 
+                                          const std::string& startDate, const std::string& endDate) {
+    std::vector<Candlestick> filtered;
+    
+    if (!validateFilterInput(data, "date range")) {
+        return filtered;
+    }
+    
+    if (startDate.empty() || endDate.empty()) {
+        std::cout << "Warning: Invalid date range provided.\n";
+        return filtered;
+    }
+    
+    if (startDate > endDate) {
+        std::cout << "Warning: Start date (" << startDate << ") is after end date (" << endDate << ").\n";
+        return filtered;
+    }
+    
+    // Use the template helper function
+    return applyFilter(data, "date range", "Date range filter", 
+                      "No data found in the specified date range.",
+                      [&startDate, &endDate](const Candlestick& candlestick) {
+                          const std::string& candleDate = candlestick.getDate();
+                          return candleDate >= startDate && candleDate <= endDate;
+                      });
+}
+
+std::vector<Candlestick> filterByTemperatureRange(const std::vector<Candlestick>& data, 
+                                                 double minTemp, double maxTemp) {
+    std::vector<Candlestick> filtered;
+    
+    if (!validateFilterInput(data, "temperature range")) {
+        return filtered;
+    }
+    
+    if (minTemp > maxTemp) {
+        std::cout << "Warning: Minimum temperature (" << minTemp 
+                  << ") is greater than maximum temperature (" << maxTemp << ").\n";
+        return filtered;
+    }
+    
+    std::cout << "Temperature range filter applied: " << std::fixed << std::setprecision(1) 
+              << minTemp << "°C to " << maxTemp << "°C\n";
+    
+    // Use the template helper function
+    return applyFilter(data, "temperature range", "Temperature filter",
+                      "No data found in the specified temperature range.",
+                      [minTemp, maxTemp](const Candlestick& candlestick) {
+                          double avgTemp = candlestick.getMeanTemperature();
+                          return avgTemp >= minTemp && avgTemp <= maxTemp;
+                      });
+}
+
+std::vector<Candlestick> filterByTrend(const std::vector<Candlestick>& data, bool uptrend) {
+    std::cout << "Trend filter applied: " << (uptrend ? "Upward" : "Downward") << " trends only\n";
+    
+    const std::string warningMessage = "No " + std::string(uptrend ? "upward" : "downward") + 
+                                      " trends found in the data.";
+    
+    // Use the template helper function
+    return applyFilter(data, "trend", "Trend filter", warningMessage,
+                      [uptrend](const Candlestick& candlestick) {
+                          return candlestick.isUptrend() == uptrend;
+                      });
+}
+
+std::vector<Candlestick> filterByVolatility(const std::vector<Candlestick>& data, double minVolatility) {
+    std::vector<Candlestick> filtered;
+    
+    if (!validateFilterInput(data, "volatility")) {
+        return filtered;
+    }
+    
+    if (minVolatility < 0) {
+        std::cout << "Warning: Minimum volatility cannot be negative. Using 0 instead.\n";
+        minVolatility = 0;
+    }
+    
+    std::cout << "Volatility filter applied: Minimum " << std::fixed << std::setprecision(1) 
+              << minVolatility << "°C volatility\n";
+    
+    const std::string warningMessage = "No data found with volatility >= " + 
+                                      std::to_string(static_cast<int>(minVolatility)) + "°C.";
+    
+    // Use the template helper function
+    return applyFilter(data, "volatility", "Volatility filter", warningMessage,
+                      [minVolatility](const Candlestick& candlestick) {
+                          return candlestick.getVolatility() >= minVolatility;
+                      });
+}
+
+void printFilterStats(size_t original, size_t filtered, const std::string& filterName) {
+    std::cout << filterName << " applied: " << original << " -> " << filtered << " candlesticks";
+    if (original > 0) {
+        double percentage = (100.0 * filtered) / original;
+        std::cout << " (" << std::fixed << std::setprecision(1) << percentage << "% retained)";
+    }
+    std::cout << "\n";
+}
+
+} // namespace DataFilter#include "DataLoader.h"
+#include "Common.h"
+#include <fstream>
+#include <sstream>
+#include <iostream>
+
+namespace DataLoader {
+
+std::vector<TemperatureRecord> loadCSV(const std::string& filename, const std::string& countryCode, 
+                                       int startYear, int endYear) {
+    std::vector<TemperatureRecord> data;
+    std::ifstream file(filename);
+    
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file '" << filename << "'" << std::endl;
+        std::cerr << "Please ensure the file exists in the same directory as the executable." << std::endl;
+        return data;
+    }
+    
+    std::string header;
+    if (!std::getline(file, header)) {
+        std::cerr << "Error: Could not read header from file." << std::endl;
+        return data;
+    }
+    
+    // ENHANCED: More robust column name matching
+    std::string targetColumn = countryCode + "_temperature";
+    int countryColumnIndex = -1;
+    int currentIndex = 0;
+    
+    std::stringstream headerStream(header);
+    std::string column;
+    
+    while (std::getline(headerStream, column, ',')) {
+        // Remove quotes if present and trim whitespace
+        column.erase(0, column.find_first_not_of(" \t\""));
+        column.erase(column.find_last_not_of(" \t\"") + 1);
+        
+        if (column == targetColumn) {
+            countryColumnIndex = currentIndex;
+            break;
+        }
+        currentIndex++;
+    }
+    
+    if (countryColumnIndex == -1) {
+        std::cerr << "Error: Country '" << countryCode << "' not found in CSV." << std::endl;
+        std::cerr << "Looking for column: '" << targetColumn << "'" << std::endl;
+        
+        // ENHANCED: Show available country columns to help user
+        std::cerr << "Available country columns: ";
+        std::stringstream tempHeaderStream(header);
+        std::string tempColumn;
+        bool foundCountryColumns = false;
+        while (std::getline(tempHeaderStream, tempColumn, ',')) {
+            tempColumn.erase(0, tempColumn.find_first_not_of(" \t\""));
+            tempColumn.erase(tempColumn.find_last_not_of(" \t\"") + 1);
+            if (tempColumn.length() == 2 || tempColumn.find("_temperature") != std::string::npos) {
+                if (foundCountryColumns) std::cerr << ", ";
+                std::cerr << tempColumn;
+                foundCountryColumns = true;
+            }
+        }
+        std::cerr << std::endl;
+        return data;
+    }
+    
+    std::string line;
+    int lineNumber = 1;
+    int validRecords = 0;
+    int skippedRecords = 0;
+    
+    while (std::getline(file, line)) {
+        lineNumber++;
+        
+        if (line.empty()) continue;
+        
+        std::vector<std::string> columns;
+        std::stringstream lineStream(line);
+        std::string cell;
+        
+        // ENHANCED: Better CSV parsing to handle quoted values
+        bool inQuotes = false;
+        std::string currentCell;
+        
+        for (char c : line) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                columns.push_back(currentCell);
+                currentCell.clear();
+            } else {
+                currentCell += c;
+            }
+        }
+        columns.push_back(currentCell); // Add the last cell
+        
+        if (columns.size() <= static_cast<size_t>(countryColumnIndex)) {
+            skippedRecords++;
+            continue;
+        }
+        
+        std::string dateStr = columns[0];
+        dateStr.erase(0, dateStr.find_first_not_of(" \t\""));
+        dateStr.erase(dateStr.find_last_not_of(" \t\"") + 1);
+        
+        if (dateStr.length() < 4) {
+            skippedRecords++;
+            continue;
+        }
+        
+        std::string yearStr = dateStr.substr(0, 4);
+        int year;
+        
+        try {
+            year = std::stoi(yearStr);
+        } catch (const std::exception& e) {
+            skippedRecords++;
+            continue;
+        }
+        
+        if (year < startYear || year > endYear) continue;
+        
+        std::string tempStr = columns[countryColumnIndex];
+        tempStr.erase(0, tempStr.find_first_not_of(" \t\""));
+        tempStr.erase(tempStr.find_last_not_of(" \t\"") + 1);
+        
+        // ENHANCED: More comprehensive handling of missing values
+        if (tempStr.empty() || tempStr == "NA" || tempStr == "N/A" || 
+            tempStr == "-" || tempStr == "null" || tempStr == "NULL" ||
+            tempStr == "nan" || tempStr == "NaN") {
+            continue;
+        }
+        
+        double temperature;
+        try {
+            temperature = std::stod(tempStr);
+            
+            // ENHANCED: Sanity check for temperature values (reasonable range for Earth)
+            if (temperature < -100.0 || temperature > 100.0) {
+                std::cerr << "Warning: Unusual temperature value " << temperature 
+                          << "°C on line " << lineNumber << ". Skipping." << std::endl;
+                skippedRecords++;
+                continue;
+            }
+            
+        } catch (const std::exception& e) {
+            skippedRecords++;
+            continue;
+        }
+        
+        data.push_back(TemperatureRecord(dateStr, temperature));
+        validRecords++;
+    }
+    
+    file.close();
+    
+    // ENHANCED: Provide summary of data loading
+    std::cout << "Data loading summary:" << std::endl;
+    std::cout << "  Valid records loaded: " << validRecords << std::endl;
+    if (skippedRecords > 0) {
+        std::cout << "  Records skipped: " << skippedRecords << std::endl;
+    }
+    
+    return data;
+}
+
+} // namespace DataLoader#include "PlotConfiguration.h"
+
+PlotConfiguration::PlotConfiguration(int width, int spacing) 
+    : candleWidth(width), candleSpacing(spacing) {
+    update();
+}
+
+void PlotConfiguration::update() {
+    upTrendBody = std::string(candleWidth, '+');
+    downTrendBody = std::string(candleWidth, '-');
+    emptySpace = std::string(candleWidth, ' ');
+    spacingStr = std::string(candleSpacing, ' ');
+
+    if (candleWidth > 0) {
+        wickShape = std::string(candleWidth, ' ');
+        wickShape[candleWidth / 2] = '|';
+    } else {
+        wickShape = "|";
+    }
+}#include "Plotter.h"
+#include "PlotConfiguration.h"
+#include "Common.h"
+#include <iostream>
+#include <iomanip>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+
+namespace {
+    // ANSI color codes
+    const std::string ANSI_COLOR_GREEN = "\033[32m";
+    const std::string ANSI_COLOR_RED = "\033[31m";
+    const std::string ANSI_COLOR_RESET = "\033[0m";
+
+    // Compression levels
+    const CompressionLevel COMPRESSION_LEVELS[] = {
+        {5, 2, "Standard"},
+        {3, 1, "Compact"},
+        {2, 1, "Dense"},
+        {1, 1, "Very Dense"},
+        {1, 0, "Ultra Dense"}
+    };
+    const int NUM_COMPRESSION_LEVELS = sizeof(COMPRESSION_LEVELS) / sizeof(COMPRESSION_LEVELS[0]);
+
+    // Use reference to avoid copying data unless necessary
+    struct DisplayStrategy {
+        std::vector<Candlestick> data;
+        PlotConfiguration config;
+        bool wasSampled;
+        bool wasCompressed;
+        std::string compressionLevel;
+        
+        // Move constructor to avoid unnecessary copies
+        DisplayStrategy(std::vector<Candlestick>&& candlesticks) 
+            : data(std::move(candlesticks)), wasSampled(false), wasCompressed(false), compressionLevel("Standard") {}
+        
+        DisplayStrategy() : wasSampled(false), wasCompressed(false), compressionLevel("Standard") {}
+    };
+
+    // Forward declarations for helper functions
+    void printXAxisLabels(const std::vector<Candlestick>&, TimeFrame, const PlotConfiguration&);
+    std::string formatDateLabel(const std::string& date, TimeFrame timeframe);
+    
+    /**
+     *  Determines the optimal display strategy combining sampling and compression.
+     */
+    DisplayStrategy determineDisplayStrategy(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe) {
+        if (candlesticks.empty()) {
+            DisplayStrategy strategy;
+            strategy.config = PlotConfiguration(5, 2);
+            return strategy;
+        }
+        
+        size_t dataSize = candlesticks.size();
+        size_t targetSize = dataSize;
+        int startCompressionLevel = 0;
+        bool needsSampling = false;
+        
+        // Determine if sampling or aggressive compression is needed based on data volume
+        if (dataSize > Constants::MODERATE_MAX_DISPLAY_POINTS) {
+            targetSize = Constants::ABSOLUTE_MAX_DISPLAY_POINTS;
+            needsSampling = true;
+            startCompressionLevel = 2; // Start with "Dense" for large datasets
+        } else if (dataSize > Constants::PREFERRED_MAX_DISPLAY_POINTS) {
+            startCompressionLevel = 1; // Start with "Compact" for medium datasets
+        }
+        
+        // Only create strategy with data copy if sampling is needed
+        if (needsSampling) {
+            std::vector<Candlestick> sampled;
+            sampled.reserve(targetSize);
+            
+            for (size_t i = 0; i < targetSize; ++i) {
+                size_t index = (i * (dataSize - 1)) / (targetSize - 1);
+                sampled.emplace_back(candlesticks[index]);
+            }
+            
+            DisplayStrategy strategy(std::move(sampled));
+            strategy.wasSampled = true;
+            dataSize = strategy.data.size();
+            
+            // Find the best compression level that fits the screen width
+            int finalCompressionLevel = startCompressionLevel;
+            for (int i = startCompressionLevel; i < NUM_COMPRESSION_LEVELS; ++i) {
+                finalCompressionLevel = i;
+                const auto& level = COMPRESSION_LEVELS[i];
+                int requiredWidth = dataSize * (level.candleWidth + level.candleSpacing) + Constants::Y_AXIS_WIDTH;
+                if (requiredWidth <= Constants::MAX_CHART_WIDTH) {
+                    break; // This level fits
+                }
+            }
+            
+            // Apply final configuration
+            const auto& level = COMPRESSION_LEVELS[finalCompressionLevel];
+            strategy.config = PlotConfiguration(level.candleWidth, level.candleSpacing);
+            strategy.wasCompressed = (finalCompressionLevel > 0);
+            strategy.compressionLevel = level.description;
+            
+            return strategy;
+        } else {
+            // No sampling needed, create strategy with reference to original data
+            DisplayStrategy strategy;
+            strategy.data.reserve(candlesticks.size());
+            for (const auto& candle : candlesticks) {
+                strategy.data.emplace_back(candle);
+            }
+            
+            // Find the best compression level that fits the screen width
+            int finalCompressionLevel = startCompressionLevel;
+            for (int i = startCompressionLevel; i < NUM_COMPRESSION_LEVELS; ++i) {
+                finalCompressionLevel = i;
+                const auto& level = COMPRESSION_LEVELS[i];
+                int requiredWidth = dataSize * (level.candleWidth + level.candleSpacing) + Constants::Y_AXIS_WIDTH;
+                if (requiredWidth <= Constants::MAX_CHART_WIDTH) {
+                    break; // This level fits
+                }
+            }
+            
+            // Apply final configuration
+            const auto& level = COMPRESSION_LEVELS[finalCompressionLevel];
+            strategy.config = PlotConfiguration(level.candleWidth, level.candleSpacing);
+            strategy.wasCompressed = (finalCompressionLevel > 0);
+            strategy.compressionLevel = level.description;
+            
+            return strategy;
+        }
+    }
+    
+    /**
+     *  Prints an intelligent X-axis with labels at reasonable intervals.
+     */
+    void printXAxisLabels(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe, const PlotConfiguration& config) {
+        const int candleCharacterWidth = config.candleWidth + config.candleSpacing;
+        if (candlesticks.empty() || candleCharacterWidth == 0) {
+            std::cout << std::string(Constants::Y_AXIS_WIDTH, '-') << "\n\n";
+            return;
+        }
+
+        const int totalChartWidth = candlesticks.size() * candleCharacterWidth;
+        std::cout << std::string(Constants::Y_AXIS_WIDTH, '-') << std::string(totalChartWidth, '-') << "\n";
+        std::cout << std::string(Constants::Y_AXIS_WIDTH, ' ');
+
+        // Calculate a reasonable number of labels to display to avoid clutter
+        int maxLabels = totalChartWidth / Constants::MIN_CHARS_PER_LABEL;
+        maxLabels = std::max(2, maxLabels); // Ensure at least 2 labels (start and end)
+        
+        const int labelInterval = std::max(1, static_cast<int>(candlesticks.size() -1) / (maxLabels -1));
+        
+        for (size_t i = 0; i < candlesticks.size(); ++i) {
+            // Determine if a label should be printed at this position
+            bool isFirst = (i == 0);
+            bool isLast = (i == candlesticks.size() - 1);
+            bool atInterval = (labelInterval > 0 && i % labelInterval == 0);
+
+            if (isFirst || isLast || atInterval) {
+                std::string label = formatDateLabel(candlesticks[i].getDate(), timeframe);
+                label = label.substr(0, candleCharacterWidth); // Truncate label to fit
+                std::cout << std::left << std::setw(candleCharacterWidth) << label;
+            } else {
+                std::cout << std::string(candleCharacterWidth, ' '); // Print empty space
+            }
+        }
+
+        std::cout << "\n\n";
+    }
+    
+    /**
+     *  Formats a date string into a readable label based on the timeframe.
+     */
+    std::string formatDateLabel(const std::string& date, TimeFrame timeframe) {
+        if (date.length() < 10) return date;
+        
+        std::string year = date.substr(0, 4);
+        std::string month = date.substr(5, 2);
+        std::string day = date.substr(8, 2);
+        std::string shortYear = date.substr(2, 2);
+        
+        const std::string monthNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        
+        try {
+            int monthNum = std::stoi(month);
+            if (monthNum >= 1 && monthNum <= 12) {
+                switch (timeframe) {
+                    case TimeFrame::Daily:   
+                        // Show actual day for daily timeframe
+                        return day + "/" + month;  // e.g., "15/03" instead of "Mar'24"
+                    case TimeFrame::Monthly: 
+                        return monthNames[monthNum - 1] + " " + shortYear;
+                    case TimeFrame::Yearly:  
+                        return "'" + shortYear;
+                }
+            }
+        } catch (...) { /* Fallback below */ }
+        
+        // Fallback to numeric format if something fails
+        return date.substr(0, 7);
+    }
+
+
+    std::string getCandlestickAtRow(const Candlestick& candle, double rowTemp, double tempPerRow, const PlotConfiguration& config) {
+        double high = candle.getHigh();
+        double low = candle.getLow();
+        double open = candle.getOpen();
+        double close = candle.getClose();
+        
+        double bodyTop = std::max(open, close);
+        double bodyBottom = std::min(open, close);
+        double tolerance = tempPerRow / 2.0;
+
+        
+        if (rowTemp <= bodyTop + tolerance && rowTemp >= bodyBottom - tolerance) {
+            return candle.isUptrend() ? (ANSI_COLOR_GREEN + config.upTrendBody + ANSI_COLOR_RESET) 
+                                      : (ANSI_COLOR_RED + config.downTrendBody + ANSI_COLOR_RESET);
+        }
+        if (rowTemp <= high + tolerance && rowTemp >= low - tolerance) {
+            return config.wickShape;
+        }
+        return config.emptySpace;
+    }
+
+    // Optimized to find both min and max in single pass
+    std::pair<double, double> findTemperatureRange(const std::vector<Candlestick>& candlesticks) {
+        if (candlesticks.empty()) return {0.0, 0.0};
+        
+        double minTemp = candlesticks[0].getLow();
+        double maxTemp = candlesticks[0].getHigh();
+        
+        for (const auto& candle : candlesticks) {
+            minTemp = std::min(minTemp, candle.getLow());
+            maxTemp = std::max(maxTemp, candle.getHigh());
+        }
+        
+        return {minTemp, maxTemp};
+    }
+
+    void printSummary(const std::vector<Candlestick>& candlesticks) {
+        if (candlesticks.empty()) return;
+        
+        int upCount = 0;
+        for (const auto& candle : candlesticks) {
+            if (candle.isUptrend()) upCount++;
+        }
+        
+        int downCount = candlesticks.size() - upCount;
+        double upPercent = 100.0 * upCount / candlesticks.size();
+
+        // Print summary
+        std::cout << "Legend:\n Wick: |, Up-Trend: " << ANSI_COLOR_GREEN << PlotConfiguration().upTrendBody 
+        << ANSI_COLOR_RESET << ", Down-Trend: " << ANSI_COLOR_RED << PlotConfiguration().downTrendBody 
+        << ANSI_COLOR_RESET << "\n\n";
+        
+        std::cout << "Summary:\n";
+        std::cout << "  Up-Trends:     " << upCount << " (" << std::fixed << std::setprecision(1) << upPercent << "%)\n";
+        std::cout << "  Down-Trends:   " << downCount << " (" << std::fixed << std::setprecision(1) << (100.0 - upPercent) << "%)\n\n";
+    }
+
+} // anonymous namespace
+
+namespace Plotter {
+
+void plotCandlesticks(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe, int chartHeight) {
+    if (candlesticks.empty()) {
+        std::cout << "No candlestick data to plot.\n";
+        return;
+    }
+
+    chartHeight = std::max(chartHeight, 5);
+
+    DisplayStrategy strategy = determineDisplayStrategy(candlesticks, timeframe);
+    
+    // Use optimized single-pass temperature range finding
+    std::pair<double, double> tempRange = findTemperatureRange(strategy.data);
+    double minTemp = tempRange.first;
+    double maxTemp = tempRange.second;
+    
+    double range = maxTemp - minTemp;
+    if (range <= 0) range = 1.0;
+    
+    minTemp -= range * Constants::CHART_PADDING_RATIO;
+    maxTemp += range * Constants::CHART_PADDING_RATIO;
+    range = maxTemp - minTemp;
+    
+    double tempPerRow = (chartHeight > 1) ? (range / (chartHeight - 1)) : 0;
+    
+    for (int row = 0; row < chartHeight; ++row) {
+        double currentTemp = maxTemp - (row * tempPerRow);
+        
+        std::cout << std::right << std::setw(Constants::Y_AXIS_WIDTH - 2) 
+                  << std::fixed << std::setprecision(1) << currentTemp << "| ";
+        
+        for (const auto& candle : strategy.data) {
+            std::cout << getCandlestickAtRow(candle, currentTemp, tempPerRow, strategy.config) 
+                      << strategy.config.spacingStr;
+        }
+        std::cout << "\n";
+    }
+    
+    printXAxisLabels(strategy.data, timeframe, strategy.config);
+    printSummary(strategy.data);
+}
+
+} // namespace Plotter#include "Prediction.h"
+#include "PredictionDisplay.h"
+#include "Common.h"
+#include <cmath>
+#include <algorithm>
+#include <numeric>
+#include <sstream>
+#include <iomanip>
+
+// Core prediction algorithms
+
+PredictionResult Prediction::predictLinearWithConfidence(const std::vector<Candlestick>& data) {
+    const std::string modelName = "Linear Regression";
+    std::string errorMessage;
+    
+    if (!validateDataSize(data, Constants::MIN_LINEAR_DATA_SIZE, errorMessage)) {
+        return PredictionResult(errorMessage, modelName);
+    }
+    
+    const auto n = static_cast<double>(data.size());
+    double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumX2 = 0.0;
+    
+    // Calculate sums for least squares method
+    for (size_t i = 0; i < data.size(); ++i) {
+        const double x = static_cast<double>(i);
+        const double y = data[i].getClose();
+        
+        sumX += x;
+        sumY += y;
+        sumXY += x * y;
+        sumX2 += x * x;
+    }
+    
+    // Calculate slope and intercept
+    const double denominator = n * sumX2 - sumX * sumX;
+    if (std::abs(denominator) < Constants::EPSILON) {
+        const double prediction = sumY / n;
+        const std::string confDesc = "R² = 0.0 (no linear trend detected)";
+        return PredictionResult(prediction, 0.0, modelName, confDesc);
+    }
+    
+    const double slope = (n * sumXY - sumX * sumY) / denominator;
+    const double intercept = (sumY - slope * sumX) / n;
+    
+    // Calculate prediction for next period
+    const double nextX = n;
+    const double prediction = slope * nextX + intercept;
+    
+    // Calculate confidence metric (R²)
+    const double rSquared = calculateRSquaredDetailed(data, slope, intercept);
+    
+    std::ostringstream confDesc;
+    confDesc << "R² = " << std::fixed << std::setprecision(3) << rSquared 
+             << " (coefficient of determination)";
+    
+    return PredictionResult(prediction, rSquared, modelName, confDesc.str());
+}
+
+PredictionResult Prediction::predictMovingAverageWithConfidence(
+    const std::vector<Candlestick>& data, int windowSize) {
+    
+    std::ostringstream modelNameStream;
+    modelNameStream << "Moving Average (" << windowSize << "-period)";
+    const std::string modelName = modelNameStream.str();
+    std::string errorMessage;
+    
+    if (!validateDataSize(data, Constants::MIN_MOVING_AVERAGE_DATA_SIZE, errorMessage)) {
+        return PredictionResult(errorMessage, modelName);
+    }
+    
+    if (!validateWindowSize(windowSize, data.size(), errorMessage)) {
+        return PredictionResult(errorMessage, modelName);
+    }
+    
+    const int actualWindowSize = std::min(windowSize, static_cast<int>(data.size()));
+    const auto startIdx = data.size() - actualWindowSize;
+    
+    // Calculate moving average prediction
+    const double sum = std::accumulate(
+        data.begin() + startIdx, data.end(), 0.0,
+        [](double acc, const Candlestick& candle) {
+            return acc + candle.getClose();
+        });
+    
+    const double prediction = sum / actualWindowSize;
+    
+    // Calculate stability confidence metric
+    const double stabilityConfidence = calculateStabilityConfidence(data, actualWindowSize);
+    
+    std::ostringstream confDesc;
+    confDesc << "Stability = " << std::fixed << std::setprecision(3) << stabilityConfidence
+             << " (inverse volatility metric)";
+    
+    return PredictionResult(prediction, stabilityConfidence, modelName, confDesc.str());
+}
+
+PredictionResult Prediction::predictHeuristicWithConfidence(const std::vector<Candlestick>& data) {
+    const std::string modelName = "Heuristic (Momentum)";
+    std::string errorMessage;
+    
+    if (!validateDataSize(data, Constants::MIN_HEURISTIC_DATA_SIZE, errorMessage)) {
+        return PredictionResult(errorMessage, modelName);
+    }
+    
+    if (data.size() == 1) {
+        const std::string confDesc = "Single data point (no momentum available)";
+        return PredictionResult(data[0].getClose(), 0.0, modelName, confDesc);
+    }
+    
+    // Calculate momentum prediction
+    const double last = data.back().getClose();
+    const double secondLast = data[data.size() - 2].getClose();
+    const double change = last - secondLast;
+    const double prediction = last + change;
+    
+    // Calculate consistency confidence metric
+    const double consistencyConfidence = calculateConsistencyConfidence(data);
+    
+    std::ostringstream confDesc;
+    confDesc << "Consistency = " << std::fixed << std::setprecision(3) << consistencyConfidence
+             << " (trend reliability metric)";
+    
+    return PredictionResult(prediction, consistencyConfidence, modelName, confDesc.str());
+}
+
+void Prediction::displayPredictionResults(
+    const std::vector<Candlestick>& data,
+    TimeFrame timeframe,
+    std::string_view country,
+    int startYear, int endYear,
+    const PredictionConfig& config) {
+    
+    PredictionDisplay::displayEnhancedResults(data, timeframe, country, startYear, endYear, config);
+}
+
+// Private helper methods
+
+double Prediction::calculateRSquaredDetailed(
+    const std::vector<Candlestick>& data, 
+    double slope, double intercept) noexcept {
+    
+    if (data.size() < Constants::MIN_LINEAR_DATA_SIZE) return 0.0;
+    
+    // Calculate mean efficiently
+    const double sumY = std::accumulate(data.begin(), data.end(), 0.0,
+        [](double acc, const Candlestick& candle) {
+            return acc + candle.getClose();
+        });
+    const double meanY = sumY / data.size();
+    
+    double totalSumSquares = 0.0;
+    double residualSumSquares = 0.0;
+    
+    for (size_t i = 0; i < data.size(); ++i) {
+        const double actualY = data[i].getClose();
+        const double predictedY = slope * static_cast<double>(i) + intercept;
+        
+        totalSumSquares += std::pow(actualY - meanY, 2);
+        residualSumSquares += std::pow(actualY - predictedY, 2);
+    }
+    
+    if (totalSumSquares < Constants::EPSILON) return 0.0;
+    
+    const double rSquared = 1.0 - (residualSumSquares / totalSumSquares);
+    return std::max(0.0, rSquared);
+}
+
+double Prediction::calculateStabilityConfidence(
+    const std::vector<Candlestick>& data, 
+    int windowSize) noexcept {
+    
+    if (data.size() < Constants::MIN_MOVING_AVERAGE_DATA_SIZE || windowSize < 2) return 0.0;
+    
+    const auto start = std::max(0, static_cast<int>(data.size()) - windowSize);
+    std::vector<double> recentValues;
+    recentValues.reserve(windowSize);
+    
+    for (int i = start; i < static_cast<int>(data.size()); ++i) {
+        recentValues.push_back(data[i].getClose());
+    }
+    
+    if (recentValues.size() < Constants::MIN_MOVING_AVERAGE_DATA_SIZE) return 0.0;
+    
+    const double mean = calculateMean(recentValues);
+    const double stdDev = calculateStandardDeviation(recentValues, mean);
+    
+    const double relativeVolatility = (mean > 0) ? stdDev / std::abs(mean) : stdDev;
+    const double stabilityConfidence = 1.0 / (1.0 + relativeVolatility * Constants::STABILITY_SCALE_FACTOR);
+    
+    return std::max(0.0, std::min(stabilityConfidence, 1.0));
+}
+
+double Prediction::calculateConsistencyConfidence(const std::vector<Candlestick>& data) noexcept {
+    if (data.size() < 3) return 0.0;
+    
+    std::vector<double> changes;
+    changes.reserve(data.size() - 1);
+    
+    for (size_t i = 1; i < data.size(); ++i) {
+        changes.push_back(data[i].getClose() - data[i-1].getClose());
+    }
+    
+    if (changes.size() < Constants::MIN_MOVING_AVERAGE_DATA_SIZE) return 0.0;
+    
+    const double changeMean = calculateMean(changes);
+    const double changeStdDev = calculateStandardDeviation(changes, changeMean);
+    
+    const double changeVariability = changeStdDev / (std::abs(changeMean) + 1.0);
+    const double consistencyConfidence = 1.0 / (1.0 + changeVariability);
+    
+    return std::max(0.0, std::min(consistencyConfidence, 1.0));
+}
+
+bool Prediction::validateDataSize(
+    const std::vector<Candlestick>& data, 
+    size_t minSize, 
+    std::string& errorMessage) noexcept {
+    
+    if (data.size() < minSize) {
+        std::ostringstream oss;
+        oss << "Insufficient data (need at least " << minSize << " points, got " << data.size() << ")";
+        errorMessage = oss.str();
+        return false;
+    }
+    return true;
+}
+
+bool Prediction::validateWindowSize(
+    int windowSize, 
+    size_t dataSize, 
+    std::string& errorMessage) noexcept {
+    
+    if (windowSize <= 0) {
+        errorMessage = "Window size must be positive";
+        return false;
+    }
+    
+    if (static_cast<size_t>(windowSize) > dataSize) {
+        std::ostringstream oss;
+        oss << "Window size (" << windowSize << ") cannot exceed data size (" << dataSize << ")";
+        errorMessage = oss.str();
+        return false;
+    }
+    
+    return true;
+}
+
+std::string Prediction::getConfidenceLevel(double confidence) noexcept {
+    if (confidence > Constants::HIGH_CONFIDENCE_THRESHOLD) {
+        return "High";
+    } else if (confidence > Constants::MODERATE_CONFIDENCE_THRESHOLD) {
+        return "Moderate";
+    } else {
+        return "Low";
+    }
+}
+
+std::string Prediction::determineNextPeriod(
+    const std::vector<Candlestick>& data, 
+    TimeFrame timeframe, int endYear) {
+    
+    if (data.empty()) return "Unknown";
+    
+    switch (timeframe) {
+        case TimeFrame::Yearly:
+            return std::to_string(endYear + 1);
+            
+        case TimeFrame::Monthly: {
+            const std::string& lastDate = data.back().getDate();
+            if (lastDate.length() >= 7) {
+                const int year = std::stoi(lastDate.substr(0, 4));
+                const int month = std::stoi(lastDate.substr(5, 2));
+                
+                if (month == 12) {
+                    return std::to_string(year + 1) + "-01 (January " + std::to_string(year + 1) + ")";
+                } else {
+                    std::ostringstream oss;
+                    oss << year << "-" << std::setfill('0') << std::setw(2) << (month + 1);
+                    return oss.str();
+                }
+            }
+            return "Next month";
+        }
+            
+        case TimeFrame::Daily:
+            return "Next day";
+            
+        default:
+            return "Next period";
+    }
+}#include "PredictionChart.h"
+#include "Prediction.h"
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
+#include <sstream>
+
+void PredictionChart::displayVerticalChart(
+    const std::vector<Candlestick>& data,
+    TimeFrame timeframe,
+    std::string_view country,
+    int startYear, int endYear) {
+    
+    if (data.size() < Constants::MIN_LINEAR_DATA_SIZE + Constants::MIN_HEURISTIC_DATA_SIZE) {
+        std::cout << "Insufficient data for prediction chart (need at least " 
+                  << (Constants::MIN_LINEAR_DATA_SIZE + Constants::MIN_HEURISTIC_DATA_SIZE) 
+                  << " periods).\n";
+        return;
+    }
+
+    // Display chart header
+    displayChartHeader(data, country, startYear, endYear);
+
+    // Generate all rolling predictions
+    const auto allPredictions = generateAllRollingPredictions(data);
+    
+    // Display the vertical chart
+    displayChart(data, allPredictions, timeframe, startYear);
+    
+    // Display chart footer and accuracy analysis
+    displayChartFooter();
+    displayAccuracyAnalysis(data, allPredictions);
+}
+
+void PredictionChart::displayChartHeader(const std::vector<Candlestick>& data, std::string_view country, 
+                                        int startYear, int endYear) {
+    std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
+    std::cout << "PREDICTION COMPARISON CHART\n";
+    std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
+    std::cout << "Visual comparison for " << country << " (" << startYear << "-" << endYear << ")\n";
+    std::cout << "Showing up to " << Constants::VERTICAL_CHART_MAX_PERIODS << " periods for optimal readability\n\n";
+}
+
+void PredictionChart::displayChart(const std::vector<Candlestick>& data, 
+                                 const std::vector<std::vector<PredictionResult>>& allPredictions,
+                                 TimeFrame timeframe, int startYear) {
+    
+    // Calculate temperature range
+    double minTemp, maxTemp;
+    calculateTemperatureRange(data, allPredictions, minTemp, maxTemp);
+    
+    const int chartHeight = Constants::VERTICAL_CHART_HEIGHT;
+    const size_t maxPeriods = std::min(data.size(), 
+                                      static_cast<size_t>(Constants::VERTICAL_CHART_MAX_PERIODS));
+    double tempPerRow = (maxTemp - minTemp) / (chartHeight - 1);
+    
+    // Display temperature scale
+    std::cout << "Temperature range: " << std::fixed << std::setprecision(Constants::TEMPERATURE_DISPLAY_PRECISION)
+              << minTemp << "°C to " << maxTemp << "°C\n\n";
+    
+    // Display vertical chart
+    for (int row = 0; row < chartHeight; row++) {
+        double currentTemp = maxTemp - (row * tempPerRow);
+        
+        std::cout << std::right << std::setw(Constants::PREDICTION_VALUE_WIDTH) 
+                  << std::fixed << std::setprecision(Constants::TEMPERATURE_DISPLAY_PRECISION) 
+                  << currentTemp << " |";
+        
+        // Show data points for each period (limited by maxPeriods)
+        for (size_t i = 0; i < maxPeriods; i++) {
+            char symbol = getSymbolAtPosition(data, allPredictions, i, currentTemp, tempPerRow);
+            std::cout << symbol;
+        }
+        std::cout << "\n";
+    }
+    
+    // Display period labels
+    std::cout << "       +";
+    for (size_t i = 0; i < maxPeriods; i++) {
+        std::cout << (i % Constants::PERIOD_LABEL_INTERVAL == 0 ? '|' : '-');
+    }
+    std::cout << "\n        ";
+    
+    // Period labels at intervals
+    for (size_t i = 0; i < maxPeriods; i += Constants::PERIOD_LABEL_INTERVAL) {
+        std::string label = formatPeriodLabel(i, timeframe, startYear);
+        std::cout << std::left << std::setw(Constants::PERIOD_LABEL_INTERVAL) 
+                  << label.substr(0, Constants::PERIOD_LABEL_MAX_LENGTH);
+    }
+    std::cout << "\n\n";
+}
+
+void PredictionChart::displayChartFooter() {
+    std::cout << "LEGEND:\n";
+    std::cout << "  o = Actual Temperature    ^ = Linear Regression\n";
+    std::cout << "  # = Moving Average        + = Heuristic Model\n";
+    std::cout << "  * = Prediction matches actual  x = Multiple predictions\n\n";
+}
+
+void PredictionChart::displayAccuracyAnalysis(const std::vector<Candlestick>& data,
+                                             const std::vector<std::vector<PredictionResult>>& allPredictions) {
+    
+    std::cout << "=== PREDICTION ACCURACY ANALYSIS ===\n";
+    
+    // Calculate errors for each model
+    std::vector<std::vector<double>> allErrors(3);
+    
+    // Linear model errors (index 0)
+    if (allPredictions.size() > 0) {
+        for (size_t i = Constants::MIN_LINEAR_DATA_SIZE; i < data.size(); i++) {
+            if ((i - Constants::MIN_LINEAR_DATA_SIZE) < allPredictions[0].size() && 
+                allPredictions[0][i - Constants::MIN_LINEAR_DATA_SIZE].isValid) {
+                double actualTemp = data[i].getClose();
+                double error = std::abs(actualTemp - allPredictions[0][i - Constants::MIN_LINEAR_DATA_SIZE].predictionValue);
+                allErrors[0].push_back(error);
+            }
+        }
+    }
+    
+    // Moving average errors (index 1)
+    if (allPredictions.size() > 1) {
+        for (size_t i = Constants::MIN_MOVING_AVERAGE_DATA_SIZE; i < data.size(); i++) {
+            if ((i - Constants::MIN_MOVING_AVERAGE_DATA_SIZE) < allPredictions[1].size() && 
+                allPredictions[1][i - Constants::MIN_MOVING_AVERAGE_DATA_SIZE].isValid) {
+                double actualTemp = data[i].getClose();
+                double error = std::abs(actualTemp - allPredictions[1][i - Constants::MIN_MOVING_AVERAGE_DATA_SIZE].predictionValue);
+                allErrors[1].push_back(error);
+            }
+        }
+    }
+    
+    // Heuristic model errors (index 2)
+    if (allPredictions.size() > 2) {
+        for (size_t i = Constants::MIN_HEURISTIC_DATA_SIZE; i < data.size(); i++) {
+            if ((i - Constants::MIN_HEURISTIC_DATA_SIZE) < allPredictions[2].size() && 
+                allPredictions[2][i - Constants::MIN_HEURISTIC_DATA_SIZE].isValid) {
+                double actualTemp = data[i].getClose();
+                double error = std::abs(actualTemp - allPredictions[2][i - Constants::MIN_HEURISTIC_DATA_SIZE].predictionValue);
+                allErrors[2].push_back(error);
+            }
+        }
+    }
+
+    // Display accuracy summary
+    std::cout << "Model Performance Summary:\n";
+    std::cout << std::left << std::setw(20) << "Model" 
+              << std::setw(15) << "Avg Error (°C)" 
+              << std::setw(15) << "Max Error (°C)"
+              << std::setw(15) << "Predictions" << "\n";
+    std::cout << std::string(Constants::ANALYSIS_SEPARATOR_WIDTH_65, '-') << "\n";
+    
+    const std::vector<std::string> modelNames = {"Linear Regression", "Moving Average", "Heuristic Model"};
+    
+    for (size_t i = 0; i < allErrors.size() && i < modelNames.size(); i++) {
+        if (!allErrors[i].empty()) {
+            double avgError = calculateMean(allErrors[i]);
+            double maxError = *std::max_element(allErrors[i].begin(), allErrors[i].end());
+            std::cout << std::left << std::setw(20) << modelNames[i]
+                      << std::setw(15) << formatDouble(avgError, Constants::TEMPERATURE_DISPLAY_PRECISION + 1)
+                      << std::setw(15) << formatDouble(maxError, Constants::TEMPERATURE_DISPLAY_PRECISION + 1)
+                      << std::setw(15) << allErrors[i].size() << "\n";
+        }
+    }
+
+    std::cout << "\nNote: This chart shows rolling predictions where each prediction uses only\n";
+    std::cout << "data available up to that point, simulating real-world forecasting conditions.\n";
+    std::cout << "Lower average error indicates better historical prediction accuracy.\n\n";
+}
+
+// Helper methods
+
+std::vector<std::vector<PredictionResult>> PredictionChart::generateAllRollingPredictions(
+    const std::vector<Candlestick>& data) {
+    
+    const std::vector<std::pair<std::function<PredictionResult(const std::vector<Candlestick>&)>, int>> models = {
+        {[](const auto& d) { return Prediction::predictLinearWithConfidence(d); }, 
+         static_cast<int>(Constants::MIN_LINEAR_DATA_SIZE)},
+        {[](const auto& d) { return Prediction::predictMovingAverageWithConfidence(d, 3); }, 
+         static_cast<int>(Constants::MIN_MOVING_AVERAGE_DATA_SIZE)},
+        {[](const auto& d) { return Prediction::predictHeuristicWithConfidence(d); }, 
+         static_cast<int>(Constants::MIN_HEURISTIC_DATA_SIZE)}
+    };
+    
+    std::vector<std::vector<PredictionResult>> allPredictions;
+    allPredictions.reserve(models.size());
+    
+    for (const auto& [modelFunc, startIdx] : models) {
+        allPredictions.push_back(generateRollingPredictions(data, modelFunc, startIdx));
+    }
+    
+    return allPredictions;
+}
+
+std::vector<PredictionResult> PredictionChart::generateRollingPredictions(
+    const std::vector<Candlestick>& data,
+    const std::function<PredictionResult(const std::vector<Candlestick>&)>& modelFunction,
+    int startIndex) {
+    
+    std::vector<PredictionResult> predictions;
+    predictions.reserve(data.size() - startIndex);
+    
+    for (size_t i = startIndex; i < data.size(); ++i) {
+        const std::vector<Candlestick> trainingData(data.begin(), data.begin() + i);
+        predictions.push_back(modelFunction(trainingData));
+    }
+    
+    return predictions;
+}
+
+char PredictionChart::getSymbolAtPosition(const std::vector<Candlestick>& data,
+                                         const std::vector<std::vector<PredictionResult>>& allPredictions,
+                                         size_t periodIndex, double currentTemp, double tempPerRow) {
+    
+    double actualTemp = data[periodIndex].getClose();
+    double tolerance = tempPerRow * Constants::TEMP_TOLERANCE_FACTOR;
+    
+    // Check if actual temperature is at this position
+    bool actualAtPosition = (std::abs(actualTemp - currentTemp) <= tolerance);
+    
+    // Check predictions
+    std::vector<bool> predictionsAtPosition(3, false);
+    
+    // Linear prediction (index 0)
+    if (allPredictions.size() > 0 && periodIndex >= Constants::MIN_LINEAR_DATA_SIZE && 
+        (periodIndex - Constants::MIN_LINEAR_DATA_SIZE) < allPredictions[0].size() && 
+        allPredictions[0][periodIndex - Constants::MIN_LINEAR_DATA_SIZE].isValid) {
+        
+        double predValue = allPredictions[0][periodIndex - Constants::MIN_LINEAR_DATA_SIZE].predictionValue;
+        predictionsAtPosition[0] = (std::abs(predValue - currentTemp) <= tolerance);
+    }
+    
+    // Moving average prediction (index 1)
+    if (allPredictions.size() > 1 && periodIndex >= Constants::MIN_MOVING_AVERAGE_DATA_SIZE && 
+        (periodIndex - Constants::MIN_MOVING_AVERAGE_DATA_SIZE) < allPredictions[1].size() && 
+        allPredictions[1][periodIndex - Constants::MIN_MOVING_AVERAGE_DATA_SIZE].isValid) {
+        
+        double predValue = allPredictions[1][periodIndex - Constants::MIN_MOVING_AVERAGE_DATA_SIZE].predictionValue;
+        predictionsAtPosition[1] = (std::abs(predValue - currentTemp) <= tolerance);
+    }
+    
+    // Heuristic prediction (index 2)
+    if (allPredictions.size() > 2 && periodIndex >= Constants::MIN_HEURISTIC_DATA_SIZE && 
+        (periodIndex - Constants::MIN_HEURISTIC_DATA_SIZE) < allPredictions[2].size() && 
+        allPredictions[2][periodIndex - Constants::MIN_HEURISTIC_DATA_SIZE].isValid) {
+        
+        double predValue = allPredictions[2][periodIndex - Constants::MIN_HEURISTIC_DATA_SIZE].predictionValue;
+        predictionsAtPosition[2] = (std::abs(predValue - currentTemp) <= tolerance);
+    }
+    
+    // Determine symbol based on what's at this position
+    int predictionCount = predictionsAtPosition[0] + predictionsAtPosition[1] + predictionsAtPosition[2];
+    
+    if (actualAtPosition && predictionCount > 0) {
+        return '*'; // Actual and prediction(s) match
+    } else if (actualAtPosition) {
+        return 'o'; // Only actual temperature
+    } else if (predictionCount > 1) {
+        return 'x'; // Multiple predictions
+    } else if (predictionsAtPosition[0]) {
+        return '^'; // Linear prediction
+    } else if (predictionsAtPosition[1]) {
+        return '#'; // Moving average
+    } else if (predictionsAtPosition[2]) {
+        return '+'; // Heuristic prediction
+    } else {
+        return ' '; // Empty space
+    }
+}
+
+void PredictionChart::calculateTemperatureRange(const std::vector<Candlestick>& data,
+                                               const std::vector<std::vector<PredictionResult>>& allPredictions,
+                                               double& minTemp, double& maxTemp) {
+    
+    minTemp = data[0].getClose();
+    maxTemp = data[0].getClose();
+    
+    // Include actual temperatures
+    for (const auto& candle : data) {
+        minTemp = std::min(minTemp, candle.getClose());
+        maxTemp = std::max(maxTemp, candle.getClose());
+    }
+    
+    // Include prediction values
+    for (const auto& predictions : allPredictions) {
+        for (const auto& pred : predictions) {
+            if (pred.isValid) {
+                minTemp = std::min(minTemp, pred.predictionValue);
+                maxTemp = std::max(maxTemp, pred.predictionValue);
+            }
+        }
+    }
+    
+    // Apply padding using constants
+    double range = maxTemp - minTemp;
+    double padding = std::max(range * Constants::ENHANCED_CHART_PADDING_RATIO, 
+                             Constants::MIN_CHART_PADDING);
+    minTemp -= padding;
+    maxTemp += padding;
+}
+
+std::string PredictionChart::formatPeriodLabel(size_t index, TimeFrame timeframe, int startYear) {
+    switch (timeframe) {
+        case TimeFrame::Yearly:
+            return std::to_string(startYear + static_cast<int>(index));
+            
+        case TimeFrame::Monthly: {
+            int year = startYear + static_cast<int>(index / 12);
+            int month = static_cast<int>(index % 12) + 1;
+            std::ostringstream oss;
+            oss << year << "-" << std::setfill('0') << std::setw(2) << month;
+            return oss.str();
+        }
+        
+        case TimeFrame::Daily: {
+            std::ostringstream oss;
+            oss << "Day" << std::setfill('0') << std::setw(3) << (index + 1);
+            return oss.str();
+        }
+        
+        default:
+            return "P" + std::to_string(index + 1);
+    }
+}
+
+std::string PredictionChart::formatDouble(double value, int precision) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << value;
+    return oss.str();
+}#include "PredictionDisplay.h"
+#include "PredictionValidation.h"
+#include "PredictionChart.h"
+#include "Prediction.h"
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
+#include <sstream>
+
+void PredictionDisplay::displayEnhancedResults(
+    const std::vector<Candlestick>& data,
+    TimeFrame timeframe,
+    std::string_view country,
+    int startYear, int endYear,
+    const PredictionConfig& config) {
+    
+    if (data.empty()) {
+        std::cout << "Cannot generate predictions: No data available.\n";
+        return;
+    }
+
+    const std::string nextPeriod = Prediction::determineNextPeriod(data, timeframe, endYear);
+    
+    // Display header
+    displayHeader(country, startYear, endYear, timeframe, data.size(), nextPeriod);
+
+    // Generate predictions
+    const auto results = std::vector<PredictionResult>{
+        Prediction::predictLinearWithConfidence(data),
+        Prediction::predictMovingAverageWithConfidence(data, config.movingAverageWindow),
+        Prediction::predictHeuristicWithConfidence(data)
+    };
+
+    // Display prediction summary
+    displayPredictionSummary(results, nextPeriod);
+
+    // Show validation if requested and sufficient data
+    if (config.showValidation && data.size() >= 4) {
+        std::cout << "\n" << std::string(Constants::VALIDATION_SEPARATOR_WIDTH_72, '-') << "\n";
+        std::cout << "CROSS-VALIDATION ANALYSIS\n";
+        std::cout << std::string(Constants::VALIDATION_SEPARATOR_WIDTH_72, '-') << "\n";
+        PredictionValidation::displayValidationResults(data);
+    }
+
+    // Show chart if requested and sufficient data
+    if (config.showChart && data.size() >= 4) {
+        PredictionChart::displayVerticalChart(data, timeframe, country, startYear, endYear);
+    }
+    
+    std::cout << "\n";
+}
+
+void PredictionDisplay::displayHeader(std::string_view country, int startYear, int endYear, 
+                                     TimeFrame timeframe, size_t dataSize, const std::string& nextPeriod) {
+    std::cout << "\n" << std::string(Constants::CHART_HEADER_WIDTH_78, '=') << "\n";
+    std::cout << "TEMPERATURE PREDICTION ANALYSIS\n";
+    std::cout << std::string(Constants::CHART_HEADER_WIDTH_78, '=') << "\n";
+    std::cout << "Country: " << country << "\n";
+    std::cout << "Data Range: " << startYear << "-" << endYear 
+              << " (" << Utils::timeFrameToString(timeframe) << " data)\n";
+    std::cout << "Data Points: " << dataSize << " periods\n";
+    std::cout << "Predicting: " << nextPeriod << "\n\n";
+}
+
+void PredictionDisplay::displayPredictionSummary(
+    const std::vector<PredictionResult>& results,
+    const std::string& nextPeriod) {
+    
+    std::cout << "PREDICTION METHODS WITH CONFIDENCE METRICS\n\n";
+
+    const std::vector<std::string> descriptions = {
+        "Least squares trend line fitting - identifies long-term temperature trends",
+        "Average of recent temperature values - smooths short-term fluctuations", 
+        "Projects recent temperature change forward - assumes momentum continues"
+    };
+
+    for (size_t i = 0; i < results.size() && i < descriptions.size(); ++i) {
+        const auto& result = results[i];
+        
+        std::cout << (i + 1) << ". " << result.modelName << "\n";
+        std::cout << "   Method: " << descriptions[i] << "\n";
+        
+        if (result.isValid) {
+            std::cout << "   Result: " << formatTemperature(result.predictionValue) << "°C\n";
+            std::cout << "   Confidence: " << result.confidenceDescription << "\n";
+            std::cout << "   Assessment: " << Prediction::getConfidenceLevel(result.confidenceMetric) << " confidence\n\n";
+        } else {
+            std::cout << "   Error: " << result.errorMessage << "\n\n";
+        }
+    }
+
+    // Display prediction table and recommendation
+    displayPredictionTable(results, nextPeriod);
+    displayRecommendation(results);
+}
+
+void PredictionDisplay::displayPredictionTable(
+    const std::vector<PredictionResult>& results,
+    const std::string& nextPeriod) {
+    
+    std::cout << "PREDICTION SUMMARY FOR " << nextPeriod << "\n";
+    std::cout << std::string(Constants::ENHANCED_CHART_SEPARATOR_WIDTH_95, '-') << "\n";
+    std::cout << std::left << std::setw(25) << "Method" 
+              << std::setw(12) << "Prediction" 
+              << std::setw(15) << "Confidence"
+              << std::setw(20) << "Reliability" << "\n";
+    std::cout << std::string(Constants::ENHANCED_CHART_SEPARATOR_WIDTH_95, '-') << "\n";
+    
+    for (const auto& result : results) {
+        if (result.isValid) {
+            std::cout << std::left << std::setw(25) << result.modelName
+                      << std::setw(12) << (formatTemperature(result.predictionValue) + "°C")
+                      << std::setw(15) << formatConfidence(result.confidenceMetric)
+                      << std::setw(20) << Prediction::getConfidenceLevel(result.confidenceMetric) << "\n";
+        } else {
+            std::cout << std::left << std::setw(25) << result.modelName 
+                      << std::setw(50) << ("Error: " + result.errorMessage) << "\n";
+        }
+    }
+    std::cout << "\n";
+}
+
+void PredictionDisplay::displayRecommendation(const std::vector<PredictionResult>& results) {
+    const auto bestResult = std::max_element(results.begin(), results.end(),
+        [](const PredictionResult& a, const PredictionResult& b) {
+            if (!a.isValid) return true;
+            if (!b.isValid) return false;
+            return a.confidenceMetric < b.confidenceMetric;
+        });
+
+    std::cout << "CONFIDENCE-BASED RECOMMENDATION\n";
+    std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '-') << "\n";
+    
+    if (bestResult != results.end() && bestResult->isValid && bestResult->confidenceMetric > 0.0) {
+        std::cout << "   RECOMMENDED: " << bestResult->modelName << "\n";
+        std::cout << "   Confidence: " << formatConfidence(bestResult->confidenceMetric) << "\n";
+        std::cout << "   Reason: Highest confidence metric among available models\n";
+    } else {
+        std::cout << "⚠ No reliable model available - consider gathering more data\n";
+    }
+    std::cout << "\n";
+}
+
+// Formatting utilities
+
+std::string PredictionDisplay::formatTemperature(double temp, int precision) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << temp;
+    return oss.str();
+}
+
+std::string PredictionDisplay::formatConfidence(double confidence, int precision) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << confidence;
+    return oss.str();
+}
+
+std::string PredictionDisplay::formatDouble(double value, int precision) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << value;
+    return oss.str();
+}#include "PredictionValidation.h"
+#include "Prediction.h"
+#include "Common.h"
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
+#include <limits>
+#include <sstream>
+
+ValidationResult PredictionValidation::validateModel(
+    const std::vector<Candlestick>& data,
+    const PredictionFunction& modelFunction,
+    int minTrainingSize) {
+    
+    ValidationResult result;
+    
+    if (static_cast<int>(data.size()) < minTrainingSize + 1) {
+        std::ostringstream errorStream;
+        errorStream << "Insufficient data for validation (need at least " 
+                   << (minTrainingSize + 1) << " points)";
+        result.errorMessage = errorStream.str();
+        return result;
+    }
+    
+    std::vector<double> errors, squaredErrors;
+    const size_t reserveSize = data.size() - static_cast<size_t>(minTrainingSize);
+    errors.reserve(reserveSize);
+    squaredErrors.reserve(reserveSize);
+    
+    // Perform leave-one-out cross-validation
+    for (size_t testIndex = static_cast<size_t>(minTrainingSize); testIndex < data.size(); ++testIndex) {
+        // Create training data efficiently
+        const std::vector<Candlestick> trainingData(data.begin(), data.begin() + static_cast<long>(testIndex));
+        
+        try {
+            const PredictionResult predResult = modelFunction(trainingData);
+            
+            if (predResult.isValid) {
+                const double actualValue = data[testIndex].getClose();
+                const double error = std::abs(predResult.predictionValue - actualValue);
+                const double squaredError = std::pow(predResult.predictionValue - actualValue, 2);
+                
+                errors.push_back(error);
+                squaredErrors.push_back(squaredError);
+                ++result.validPredictions;
+            }
+        } catch (const std::exception&) {
+            // Handle any exceptions from prediction function
+            // Continue with next iteration
+        }
+        
+        ++result.totalAttempts;
+    }
+    
+    if (errors.empty()) {
+        result.errorMessage = "No valid predictions generated during validation";
+        return result;
+    }
+    
+    // Calculate statistical metrics efficiently
+    result.meanAbsoluteError = calculateMean(errors);
+    result.meanSquaredError = calculateMean(squaredErrors);
+    result.maxError = *std::max_element(errors.begin(), errors.end());
+    result.minError = *std::min_element(errors.begin(), errors.end());
+    result.isValid = true;
+    
+    return result;
+}
+
+std::vector<ValidationResult> PredictionValidation::validateAllModels(const std::vector<Candlestick>& data) {
+    std::vector<ValidationResult> results;
+    results.reserve(3);
+    
+    // Define prediction functions using lambdas
+    const std::vector<std::pair<PredictionFunction, int>> models = {
+        {[](const std::vector<Candlestick>& d) { return Prediction::predictLinearWithConfidence(d); }, 
+         static_cast<int>(Constants::MIN_LINEAR_DATA_SIZE)},
+        {[](const std::vector<Candlestick>& d) { return Prediction::predictMovingAverageWithConfidence(d, 3); }, 
+         static_cast<int>(Constants::MIN_MOVING_AVERAGE_DATA_SIZE)},
+        {[](const std::vector<Candlestick>& d) { return Prediction::predictHeuristicWithConfidence(d); }, 
+         static_cast<int>(Constants::MIN_HEURISTIC_DATA_SIZE)}
+    };
+    
+    for (const auto& [modelFunc, minSize] : models) {
+        results.push_back(validateModel(data, modelFunc, minSize));
+    }
+    
+    return results;
+}
+
+void PredictionValidation::displayValidationResults(const std::vector<Candlestick>& data) {
+    const auto results = validateAllModels(data);
+    
+    if (results.empty()) {
+        std::cout << "No validation results to display.\n";
+        return;
+    }
+
+    const std::vector<std::string> modelNames = {"Linear Regression", "Moving Average (3)", "Heuristic (Momentum)"};
+    
+    std::cout << "Cross-Validation Results:\n";
+    std::cout << std::left << std::setw(20) << "Model" 
+              << std::setw(12) << "MAE (°C)" 
+              << std::setw(12) << "RMSE (°C)"
+              << std::setw(12) << "Max Error"
+              << std::setw(15) << "Success Rate" << "\n";
+    std::cout << std::string(Constants::VALIDATION_SEPARATOR_WIDTH_71, '-') << "\n";
+    
+    for (size_t i = 0; i < results.size() && i < modelNames.size(); i++) {
+        const ValidationResult& result = results[i];
+        
+        if (result.isValid) {
+            double rmse = result.getRMSE();
+            double successRate = result.getSuccessRate();
+            
+            std::cout << std::left << std::setw(20) << modelNames[i]
+                      << std::setw(12) << formatDouble(result.meanAbsoluteError, Constants::TEMPERATURE_DISPLAY_PRECISION + 1)
+                      << std::setw(12) << formatDouble(rmse, Constants::TEMPERATURE_DISPLAY_PRECISION + 1)
+                      << std::setw(12) << formatDouble(result.maxError, Constants::TEMPERATURE_DISPLAY_PRECISION + 1)
+                      << std::setw(15) << (formatDouble(successRate, Constants::TEMPERATURE_DISPLAY_PRECISION) + "%") << "\n";
+        } else {
+            std::cout << std::left << std::setw(20) << modelNames[i] 
+                      << std::setw(50) << ("Error: " + result.errorMessage) << "\n";
+        }
+    }
+    
+    // Find best performing model
+    double bestMAE = std::numeric_limits<double>::max();
+    std::string bestValidationModel = "None";
+    
+    for (size_t i = 0; i < results.size() && i < modelNames.size(); i++) {
+        if (results[i].isValid && results[i].meanAbsoluteError < bestMAE) {
+            bestMAE = results[i].meanAbsoluteError;
+            bestValidationModel = modelNames[i];
+        }
+    }
+    
+    if (bestValidationModel != "None") {
+        std::cout << "\n VALIDATION PERFORMANCE: " << bestValidationModel 
+                  << " (MAE: " << formatDouble(bestMAE, Constants::TEMPERATURE_DISPLAY_PRECISION + 1) << "°C)\n";
+        std::cout << "   Note: Lower MAE indicates better historical prediction accuracy\n";
+    }
+}
+
+std::string PredictionValidation::formatDouble(double value, int precision) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << value;
+    return oss.str();
+}#include "UserInput.h"
+#include "Common.h"
+#include "Candlestick.h"
+#include <iostream>
+#include <algorithm>
+#include <limits>
+#include <cctype>
+#include <sstream>
+#include <iomanip>
+#include <vector>
+#include <map>
+#include <fstream>
+#include <ctime>
+
+#ifdef _WIN32
+    #include <windows.h>
+    #include <cstdlib>
+#else
+    #include <cstdlib>
+    #include <unistd.h>
+#endif
+
+namespace {
+    // Use a map as a single source of truth for country codes and their full names.
+    const std::map<std::string, std::string> AVAILABLE_COUNTRIES = {
+        {"AT", "Austria"}, {"BE", "Belgium"}, {"BG", "Bulgaria"},
+        {"CH", "Switzerland"}, {"CZ", "Czech Rep."}, {"DE", "Germany"},
+        {"DK", "Denmark"}, {"EE", "Estonia"}, {"ES", "Spain"},
+        {"FI", "Finland"}, {"FR", "France"}, {"GB", "Great Britain"},
+        {"GR", "Greece"}, {"HR", "Croatia"}, {"HU", "Hungary"},
+        {"IE", "Ireland"}, {"IT", "Italy"}, {"LT", "Lithuania"},
+        {"LU", "Luxembourg"}, {"LV", "Latvia"}, {"NL", "Netherlands"},
+        {"NO", "Norway"}, {"PL", "Poland"}, {"PT", "Portugal"},
+        {"RO", "Romania"}, {"SE", "Sweden"}, {"SI", "Slovenia"},
+        {"SK", "Slovakia"}
+    };
+    
+    // Helper function to reduce code duplication for y/n input validation
+    bool getYesNoInput(const std::string& prompt) {
+        std::string choice;
+        std::cout << prompt;
+        
+        while (true) {
+            std::cin >> choice;
+            std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
+            
+            if (choice == "y" || choice == "yes") return true;
+            if (choice == "n" || choice == "no") return false;
+            
+            std::cout << "Please enter 'y' for yes or 'n' for no: ";
+            UserInput::Internal::clearInputBuffer();
+        }
+    }
+}
+
+namespace UserInput {
+
+    void exportToFile(const std::string& filename, const std::vector<Candlestick>& data) {
+        std::ofstream file(filename);
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open file " << filename << " for writing\n";
+            return;
+        }
+        
+        // Write header
+        file << "Date,Open,High,Low,Close\n";
+        
+        // Write data
+        for (const auto& c : data) {
+            file << c.getDate() << ","
+                 << std::fixed << std::setprecision(1)
+                 << c.getOpen() << ","
+                 << c.getHigh() << ","
+                 << c.getLow() << ","
+                 << c.getClose() << "\n";
+        }
+        
+        file.close();
+        std::cout << "Data exported to " << filename << " (" << data.size() << " records)\n";
+    }
+    
+    bool askForDataExport(const std::vector<Candlestick>& data, const std::string& defaultPrefix) {
+        if (data.empty()) {
+            std::cout << "No data available for export.\n";
+            return false;
+        }
+        
+        std::cout << "\n=== DATA EXPORT ===\n";
+        std::cout << "Export " << data.size() << " candlestick records to CSV file?\n";
+        std::cout << "This will create a CSV file with Date, Open, High, Low, Close columns.\n";
+        
+        // Simple yes/no input
+        std::cout << "\nWould you like to export the data? (y/n): ";
+        std::string choice;
+        std::cin >> choice;
+        std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
+        
+        if (choice != "y" && choice != "yes") {
+            return false;
+        }
+        
+        // Get filename from user
+        std::string filename;
+        std::cout << "Enter filename (without .csv extension) or press Enter for default: ";
+        
+        std::cin.ignore(); // Clear input buffer
+        std::getline(std::cin, filename);
+        
+        // Use default if empty
+        if (filename.empty()) {
+            filename = defaultPrefix;
+        }
+        
+        // Add .csv extension if not present
+        if (filename.length() < 4 || filename.substr(filename.length() - 4) != ".csv") {
+            filename += ".csv";
+        }
+        
+        // Perform the export
+        exportToFile(filename, data);
+        
+        return true;
+    }
+
+// Forward declaration from Internal namespace
+namespace Internal {
+    bool isValidCountryCode(const std::string& country);
+}
+
+std::string getCountryCode() {
+    std::string country;
+    bool validInput = false;
+    
+    std::cout << "\n=== Country Selection ===\n";
+    displayAvailableCountries();
+    
+    while (!validInput) {
+        std::cout << "\nEnter country code (2 letters): ";
+        std::cin >> country;
+        
+        country = Internal::toUpperCase(country);
+        
+        if (country.length() != 2) {
+            std::cout << "Error: Country code must be exactly 2 letters.\n";
+            Internal::clearInputBuffer();
+            continue;
+        }
+        
+        if (!Internal::isValidCountryCode(country)) {
+            std::cout << "Error: '" << country << "' is not a valid country code.\n";
+            std::cout << "Please choose from the available countries listed above.\n";
+            Internal::clearInputBuffer();
+            continue;
+        }
+        
+        auto it = AVAILABLE_COUNTRIES.find(country);
+        if (it != AVAILABLE_COUNTRIES.end()) {
+            std::cout << "\n✓ Selected: " << country << " (" << it->second << ")\n";
+        } else {
+            std::cout << "\n✓ Selected: " << country << "\n";
+        }
+        validInput = true;
+    }
+    
+    return country;
+}
+
+void getYearRange(int& startYear, int& endYear) {
+    std::cout << "\n=== Year Range Selection ===\n";
+    std::cout << "Available data range: " << Constants::MIN_YEAR << "-" << Constants::MAX_YEAR << "\n\n";
+    
+    startYear = Internal::getYear("Enter start year", Constants::MIN_YEAR, Constants::MAX_YEAR);
+    
+    bool validRange = false;
+    while (!validRange) {
+        endYear = Internal::getYear("Enter end year", startYear, Constants::MAX_YEAR);
+        
+        if (endYear < startYear) {
+            std::cout << "Error: End year (" << endYear << ") cannot be before start year (" << startYear << ").\n";
+            continue;
+        }
+        validRange = true;
+    }
+    
+    std::cout << "\n✓ Selected range: " << startYear << "-" << endYear 
+              << " (" << (endYear - startYear + 1) << " years)\n";
+}
+
+TimeFrame getTimeFrame() {
+    int choice;
+    
+    std::cout << "\n=== Timeframe Selection ===\n";
+    Internal::displayAvailableTimeFrames();
+    
+    while (true) {
+        std::cout << "\nEnter your choice (1-3): ";
+        
+        if (!(std::cin >> choice)) {
+            std::cout << "Error: Please enter a valid number.\n";
+            Internal::clearInputBuffer();
+            continue;
+        }
+        
+        switch (choice) {
+            case 1: 
+                std::cout << "\n✓ Selected: Yearly aggregation\n";
+                return TimeFrame::Yearly;
+            case 2: 
+                std::cout << "\n✓ Selected: Monthly aggregation\n";
+                return TimeFrame::Monthly;
+            case 3: 
+                std::cout << "\n✓ Selected: Daily aggregation\n";
+                return TimeFrame::Daily;
+            default:
+                std::cout << "Error: Please enter 1, 2, or 3.\n";
+                continue;
+        }
+    }
+}
+
+// Use helper function to reduce code duplication
+bool askForFiltering() {
+    std::cout << "\n=== Data Filtering ===\n";
+    std::cout << "Filtering allows you to focus your analysis on specific aspects of the data:\n";
+    std::cout << "  • Date Range: Analyze specific time periods\n";
+    std::cout << "  • Temperature Range: Focus on periods with certain temperature levels\n";
+    std::cout << "  • Trend Direction: Analyze only warming or cooling periods\n";
+    std::cout << "  • Volatility: Focus on periods with high temperature variation\n";
+    
+    return getYesNoInput("\nWould you like to apply a filter to the data? (y/n): ");
+}
+
+// Use helper function to reduce code duplication
+bool askForPredictions() {
+    std::cout << "\n=== Temperature Predictions ===\n";
+    std::cout << "Generate advanced temperature forecasts with confidence metrics:\n";
+    std::cout << "  • Linear Regression: R² confidence metric (trend strength)\n";
+    std::cout << "  • Moving Average: Stability confidence (based on volatility)\n";
+    std::cout << "  • Momentum Model: Consistency confidence (trend reliability)\n";
+    std::cout << "  • Cross-Validation: Model accuracy assessment (if sufficient data)\n";
+    std::cout << "  • Prediction Charts: Visual comparison of actual vs predicted (Figure 4 style)\n";
+    
+    return getYesNoInput("\nWould you like to generate enhanced temperature predictions? (y/n): ");
+}
+
+// Use helper function to reduce code duplication
+bool askToContinue(const std::string& operation) {
+    return getYesNoInput("\nWould you like to " + operation + "? (y/n): ");
+}
+
+bool getFilterCriteria(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe,
+                      FilterType& filterType, std::string& startDate, std::string& endDate,
+                      double& minTemp, double& maxTemp, bool& uptrend, double& minVolatility) {
+    if (candlesticks.empty()) {
+        std::cout << "Error: No data available for filtering.\n";
+        return false;
+    }
+    
+    std::cout << "\n=== Filter Selection ===\n";
+    std::cout << "Available filter types:\n";
+    std::cout << "  1. Date Range - Filter by specific date range\n";
+    std::cout << "  2. Temperature Range - Filter by temperature values\n";
+    std::cout << "  3. Trend Direction - Filter by upward or downward trends\n";
+    std::cout << "  4. Volatility - Filter by temperature volatility\n";
+    
+    int filterChoice;
+    while (true) {
+        std::cout << "\nEnter filter type (1-4): ";
+        if (!(std::cin >> filterChoice) || filterChoice < 1 || filterChoice > 4) {
+            std::cout << "Error: Please enter a number between 1 and 4.\n";
+            Internal::clearInputBuffer();
+            continue;
+        }
+        break;
+    }
+    
+    filterType = static_cast<FilterType>(filterChoice);
+    
+    switch (filterType) {
+        case FilterType::DateRange:
+            return Internal::getDateRangeFilter(candlesticks, timeframe, startDate, endDate);
+        case FilterType::TemperatureRange:
+            return Internal::getTemperatureRangeFilter(candlesticks, minTemp, maxTemp);
+        case FilterType::Trend:
+            return Internal::getTrendFilter(uptrend);
+        case FilterType::Volatility:
+            return Internal::getVolatilityFilter(candlesticks, minVolatility);
+        default:
+            return false;
+    }
+}
+
+void displayAvailableCountries() {
+    std::cout << "Available countries:\n";
+    int i = 0;
+    for (const auto& pair : AVAILABLE_COUNTRIES) {
+        // Print "  CODE (Full Name)      "
+        std::cout << "  " << std::left << std::setw(4) << pair.first
+                  << std::setw(18) << ("(" + pair.second + ")");
+        
+        if (++i % 3 == 0) { // Print 3 countries per line
+            std::cout << "\n";
+        }
+    }
+    if (i % 3 != 0) {
+        std::cout << "\n";
+    }
+}
+
+// Improved cross-platform screen clearing
+void clearScreen() {
+    #ifdef _WIN32
+        // Windows
+        HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hStdOut != INVALID_HANDLE_VALUE) {
+            CONSOLE_SCREEN_BUFFER_INFO csbi;
+            if (GetConsoleScreenBufferInfo(hStdOut, &csbi)) {
+                DWORD written;
+                COORD topLeft = { 0, 0 };
+                DWORD consoleSize = csbi.dwSize.X * csbi.dwSize.Y;
+                FillConsoleOutputCharacter(hStdOut, ' ', consoleSize, topLeft, &written);
+                FillConsoleOutputAttribute(hStdOut, csbi.wAttributes, consoleSize, topLeft, &written);
+                SetConsoleCursorPosition(hStdOut, topLeft);
+                return;
+            }
+        }
+        // Fallback for Windows
+        system("cls");
+    #else
+        // Unix/Linux/macOS
+        // Try ANSI escape codes first (works on most modern terminals)
+        if (isatty(STDOUT_FILENO)) {
+            std::cout << "\033[2J\033[H" << std::flush;
+        } else {
+            // Fallback for Unix systems
+            int result = system("clear");
+            (void)result;  // Suppress unused variable warning
+        }
+    #endif
+}
+
+void waitForUser() {
+    std::cout << "\nPress Enter to continue...";
+    std::cin.ignore();
+    std::cin.get();
+}
+
+// Use helper function to reduce code duplication
+bool askForPredictionChart() {
+    std::cout << "\n=== PREDICTION COMPARISON CHART ===\n";
+    std::cout << "Generate a visual chart comparing actual temperatures with predictions\n";
+    std::cout << "from all three models across the historical period.\n";
+    std::cout << "\nThis creates 'Figure 4' style visualization showing:\n";
+    std::cout << "• Actual temperatures (o)\n";
+    std::cout << "• Linear model predictions (^)\n";
+    std::cout << "• Moving average predictions (#)\n";
+    std::cout << "• Heuristic model predictions (+)\n";
+    
+    return getYesNoInput("\nWould you like to generate the prediction comparison chart? (y/n): ");
+}
+
+// Use helper function to reduce code duplication
+bool askToAnalyzeAnotherCountry() {
+    std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
+    std::cout << "Analysis Complete!\n";
+    std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
+    
+    bool result = getYesNoInput("\nWould you like to analyze another country? (y/n): ");
+    if (result) {
+        clearScreen();
+    }
+    return result;
+}
+
+
+namespace Internal {
+
+void displayAvailableTimeFrames() {
+    std::cout << "Available timeframes:\n";
+    std::cout << "  1. Yearly   - One candlestick per year (recommended for long-term trends)\n";
+    std::cout << "  2. Monthly  - One candlestick per month (good for seasonal patterns)\n";
+    std::cout << "  3. Daily    - One candlestick per day (detailed short-term analysis)\n";
+    std::cout << "\nNote: Daily timeframe will generate many candlesticks and may be\n";
+    std::cout << "compressed for display. Consider using shorter date ranges with daily data.\n";
+}
+
+int getYear(const std::string& prompt, int minYear, int maxYear) {
+    int year;
+    
+    while (true) {
+        std::cout << prompt << " (" << minYear << "-" << maxYear << "): ";
+        
+        if (!(std::cin >> year)) {
+            std::cout << "Error: Please enter a valid number.\n";
+            clearInputBuffer();
+            continue;
+        }
+        
+        if (year < minYear || year > maxYear) {
+            std::cout << "Error: Year must be between " << minYear << " and " << maxYear << ".\n";
+            continue;
+        }
+        
+        return year;
+    }
+}
+
+bool getDateRangeFilter(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe,
+                       std::string& startDate, std::string& endDate) {
+    std::cout << "\n=== Date Range Filter ===\n";
+    std::cout << "Available date range: " << candlesticks.front().getDate() 
+              << " to " << candlesticks.back().getDate() << "\n";
+    
+    std::cout << "Enter start date (YYYY-MM-DD): ";
+    std::cin >> startDate;
+    
+    std::cout << "Enter end date (YYYY-MM-DD): ";
+    std::cin >> endDate;
+    
+    if (startDate.length() != 10 || endDate.length() != 10 ||
+        startDate[4] != '-' || startDate[7] != '-' ||
+        endDate[4] != '-' || endDate[7] != '-') {
+        std::cout << "Error: Invalid date format. Use YYYY-MM-DD.\n";
+        return false;
+    }
+    
+    if (startDate > endDate) {
+        std::cout << "Error: Start date cannot be after end date.\n";
+        return false;
+    }
+    
+    return true;
+}
+
+bool getTemperatureRangeFilter(const std::vector<Candlestick>& candlesticks,
+                              double& minTemp, double& maxTemp) {
+    double dataMinTemp = candlesticks[0].getLow();
+    double dataMaxTemp = candlesticks[0].getHigh();
+    
+    for (const auto& candle : candlesticks) {
+        dataMinTemp = std::min({dataMinTemp, candle.getLow(), candle.getClose()});
+        dataMaxTemp = std::max({dataMaxTemp, candle.getHigh(), candle.getClose()});
+    }
+    
+    std::cout << "\n=== Temperature Range Filter ===\n";
+    std::cout << "Available temperature range in data: " << std::fixed << std::setprecision(1) 
+              << dataMinTemp << "°C to " << dataMaxTemp << "°C\n";
+    std::cout << "This filter keeps candlesticks where the average temperature (close value) is within your range.\n";
+    
+    while (true) {
+        std::cout << "Enter minimum temperature (°C): ";
+        if (!(std::cin >> minTemp)) {
+            std::cout << "Error: Please enter a valid number.\n";
+            clearInputBuffer();
+            continue;
+        }
+        
+        std::cout << "Enter maximum temperature (°C): ";
+        if (!(std::cin >> maxTemp)) {
+            std::cout << "Error: Please enter a valid number.\n";
+            clearInputBuffer();
+            continue;
+        }
+        
+        if (minTemp > maxTemp) {
+            std::cout << "Error: Minimum temperature cannot be greater than maximum temperature.\n";
+            continue;
+        }
+        
+        break;
+    }
+    
+    return true;
+}
+
+bool getTrendFilter(bool& uptrend) {
+    int choice;
+    
+    std::cout << "\n=== Trend Direction Filter ===\n";
+    std::cout << "Filter options:\n";
+    std::cout << "  1. Upward trends (close >= open)\n";
+    std::cout << "  2. Downward trends (close < open)\n";
+    
+    while (true) {
+        std::cout << "Enter choice (1-2): ";
+        if (!(std::cin >> choice) || (choice != 1 && choice != 2)) {
+            std::cout << "Error: Please enter 1 or 2.\n";
+            clearInputBuffer();
+            continue;
+        }
+        
+        uptrend = (choice == 1);
+        break;
+    }
+    
+    return true;
+}
+
+bool getVolatilityFilter(const std::vector<Candlestick>& candlesticks, double& minVolatility) {
+    std::vector<double> volatilities;
+    volatilities.reserve(candlesticks.size());
+    for (const auto& candle : candlesticks) {
+        volatilities.push_back(candle.getVolatility());
+    }
+    
+    std::sort(volatilities.begin(), volatilities.end());
+    
+    std::cout << "\n=== Volatility Filter ===\n";
+    std::cout << "Volatility is the difference between high and low temperatures.\n";
+    
+    while (true) {
+        std::cout << "\nEnter minimum volatility (°C) to keep: ";
+        if (!(std::cin >> minVolatility) || minVolatility < 0) {
+            std::cout << "Error: Please enter a positive number.\n";
+            clearInputBuffer();
+            continue;
+        }
+        break;
+    }
+    
+    return true;
+}
+
+
+std::string toUpperCase(const std::string& str) {
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(), ::toupper);
+    return result;
+}
+
+bool isValidCountryCode(const std::string& country) {
+    // Check if the country code exists as a key in the map.
+    return AVAILABLE_COUNTRIES.count(country) > 0;
+}
+
+void clearInputBuffer() {
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+} // namespace UserInput
+} #include <iostream>
+#include <string>
+#include "ApplicationController.h"
+
+/**
+ * Temperature Analysis Tool
+ * 
+ * This program provides a command-line interface for analyzing historical
+ * temperature data from European countries (1980-2019). It supports:
+ * 
+ * - Candlestick data computation and visualization
+ * - Text-based plotting with intelligent compression
+ * - Advanced filtering (date, temperature, trend, volatility)
+ * - Temperature prediction using multiple models with confidence metrics
+ * - Cross-validation and prediction comparison charts
+ * 
+ * @return 0 on successful completion, non-zero on error
+ */
+int main() {
+    // Configuration
+    const std::string dataFilePath = "./weather_data_EU_1980-2019_temp_only.csv";
+    
+    try {
+        // Create and run the application controller
+        ApplicationController app(dataFilePath);
+        return app.run();
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal Error: " << e.what() << std::endl;
+        std::cerr << "The application cannot continue and will now exit." << std::endl;
+        return 1;
+        
+    } catch (...) {
+        std::cerr << "Fatal Error: Unknown system error occurred." << std::endl;
+        std::cerr << "The application cannot continue and will now exit." << std::endl;
+        return 2;
+    }
+}

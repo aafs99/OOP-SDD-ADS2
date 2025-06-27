@@ -28,9 +28,9 @@ public:
     
     // 
     /**
-     * @brief Gets the mean temperature for this period
-     * @return The average temperature (same as close value)
-     * @note In our temperature candlestick model, 'close' represents 
+     *  Gets the mean temperature for this period
+     * @return The average temperature 
+     * @note Inthe temperature candlestick model, 'close' represents 
      *       the calculated average temperature for the time period
      */
     double getMeanTemperature() const { return close_; }

@@ -9,7 +9,7 @@
 
 namespace Plotter {
     /**
-     * @brief Plots a vector of Candlestick data to the console.
+     *  Plots a vector of Candlestick data to the console.
      * * This function handles the entire process of rendering the chart, including
      * intelligent sampling of data, optimal compression for display, and printing
      * the Y-axis, X-axis, and a summary.

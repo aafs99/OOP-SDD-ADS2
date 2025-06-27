@@ -43,7 +43,7 @@ namespace {
     std::string formatDateLabel(const std::string& date, TimeFrame timeframe);
     
     /**
-     * @brief Determines the optimal display strategy combining sampling and compression.
+     *  Determines the optimal display strategy combining sampling and compression.
      */
     DisplayStrategy determineDisplayStrategy(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe) {
         if (candlesticks.empty()) {
@@ -128,7 +128,7 @@ namespace {
     }
     
     /**
-     * @brief Prints an intelligent X-axis with labels at reasonable intervals.
+     *  Prints an intelligent X-axis with labels at reasonable intervals.
      */
     void printXAxisLabels(const std::vector<Candlestick>& candlesticks, TimeFrame timeframe, const PlotConfiguration& config) {
         const int candleCharacterWidth = config.candleWidth + config.candleSpacing;
@@ -166,7 +166,7 @@ namespace {
     }
     
     /**
-     * @brief Formats a date string into a readable label based on the timeframe.
+     *  Formats a date string into a readable label based on the timeframe.
      */
     std::string formatDateLabel(const std::string& date, TimeFrame timeframe) {
         if (date.length() < 10) return date;

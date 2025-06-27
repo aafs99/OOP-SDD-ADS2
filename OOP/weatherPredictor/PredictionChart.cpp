@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <sstream>
 
+//! TDL Output looks messy, replace txt with ANSI codes for better readability
 void PredictionChart::displayVerticalChart(
     const std::vector<Candlestick>& data,
     TimeFrame timeframe,

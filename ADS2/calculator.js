@@ -592,7 +592,7 @@ class PostfixCalculator {
 
     /**
      * Format the current stack for display
-     * Stack is displayed with top element on the LEFT as per specification
+     * Stack is displayed with top element on the LEFT
      * @returns {string} Formatted stack representation
      */
     formatStack() {

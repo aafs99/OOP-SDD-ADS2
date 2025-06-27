@@ -3,7 +3,6 @@
 #include "ApplicationController.h"
 
 /**
- * Temperature Analysis Tool
  * 
  * This program provides a command-line interface for analyzing historical
  * temperature data from European countries (1980-2019). It supports:

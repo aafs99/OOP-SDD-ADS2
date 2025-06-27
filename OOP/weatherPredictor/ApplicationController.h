@@ -8,21 +8,21 @@
 #include "TemperatureRecord.h"
 
 /**
- * @brief Main application controller that manages the analysis workflow
+ *  Main application controller that manages the analysis workflow
  * 
- * This class encapsulates the main business logic of the temperature analysis tool,
+ * This class encapsulates the main business logic,
  * separating it from the main() function for better organization and testability.
  */
 class ApplicationController {
 public:
     /**
-     * @brief Constructs the application controller with data file path
+     *  Constructs the application controller with data file path
      * @param dataFilePath Path to the CSV data file
      */
     explicit ApplicationController(const std::string& dataFilePath);
     
     /**
-     * @brief Runs the main application loop
+     *  Runs the main application loop
      * @return Exit code (0 for success, non-zero for error)
      */
     int run();

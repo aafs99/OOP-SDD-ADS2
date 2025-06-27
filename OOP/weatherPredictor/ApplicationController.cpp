@@ -267,7 +267,7 @@ void ApplicationController::handlePredictionWorkflow(const std::vector<Candlesti
 void ApplicationController::showWelcomeMessage() {
     UserInput::clearScreen();
     std::cout << "=================================================================\n";
-    std::cout << "    EUROPEAN TEMPERATURE ANALYSIS TOOL WITH PREDICTIONS\n";
+    std::cout << "              TEMPERATURE ANALYSIS TOOL WITH PREDICTIONS\n";
     std::cout << "                    (1980-2019 Historical Data)\n";
     std::cout << "=================================================================\n";
     std::cout << "\nWelcome! This tool helps you analyze and predict temperature trends\n";
@@ -280,7 +280,7 @@ void ApplicationController::showFarewellMessage() {
     UserInput::clearScreen();
     std::cout << "\n" << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n";
     std::cout << "   THANK YOU FOR USING THE TEMPERATURE ANALYSIS TOOL!\n";
-    std::cout << "                    Have a great day! 🌡️\n";
+    std::cout << "                    Have a great day! \n";
     std::cout << std::string(Constants::SECTION_SEPARATOR_WIDTH_60, '=') << "\n\n";
 }
 
