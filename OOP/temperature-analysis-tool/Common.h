@@ -43,7 +43,7 @@ namespace Constants {
     const double TEMP_RANGE_SANITY_CHECK = 100.0;   // Sanity check for temperature values
     
     // Prediction model constants
-    const size_t MIN_LINEAR_DATA_SIZE = 2;          // Minimum data points for linear regression
+    const size_t MIN_LINEAR_DATA_SIZE = 30;          // Minimum data points for linear regression
     const size_t MIN_HEURISTIC_DATA_SIZE = 2;       // Minimum data points for heuristic model
     const size_t MIN_MOVING_AVERAGE_DATA_SIZE = 1;  // Minimum data points for moving average
     

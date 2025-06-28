@@ -4,7 +4,7 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -g
 
 # Target executable
-TARGET = temperature_analysis
+TARGET = temperature_analyzer
 
 # Core source files
 CORE_SOURCES = main.cpp \

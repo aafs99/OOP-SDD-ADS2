@@ -1,0 +1,84 @@
+Submission Details:
+    |--Report as pdf
+    |--README file as text file 
+    |--Code as text file
+    |--Makefile for compilation
+    |--Code as zip file with the following structure:
+            temperature-analysis-tool/
+            │
+            ├── main.cpp                               # Program entry point
+            │
+            ├── ApplicationController.h                # Main workflow controller interface
+            ├── ApplicationController.cpp              # Controller implementation
+            │
+            ├── Candlestick.h                         # Candlestick data structure                      
+            ├── Candlestick.cpp                       # Candlestick methods
+            │
+            ├── CandlestickCalculator.h               # OHLC computation interface
+            ├── CandlestickCalculator.cpp             # Temperature to candlestick conversion               
+            │
+            ├── Common.h                              # Shared constants, enums, utilities
+            │
+            ├── DataFilter.h                          # Filtering operations interface
+            ├── DataFilter.cpp                        # Filter implementations (4 types)
+            │           
+
+            ├── DataLoader.h                          # CSV loading interface
+            ├── DataLoader.cpp                        # CSV parser for temperature data
+            │
+            ├── PlotConfiguration.h                   # Chart display configuration
+            ├── PlotConfiguration.cpp                 # Compression levels and symbols
+            │
+            ├── Plotter.h                            # ASCII chart generation interface
+            ├── Plotter.cpp                          # Adaptive candlestick visualization           
+            │
+            ├── Prediction.h                         # Prediction models interface
+            ├── Prediction.cpp                       # Linear, MA, momentum implementations
+            │
+            ├── PredictionChart.h                    # Prediction comparison chart interface
+            ├── PredictionChart.cpp                  # Vertical ASCII prediction visualization
+            │
+            ├── PredictionDisplay.h                  # Prediction output formatting interface
+            ├── PredictionDisplay.cpp                # Results display and recommendations
+            │
+            ├── PredictionValidation.h               # Cross-validation interface
+            ├── PredictionValidation.cpp             # Model validation implementation
+            │
+            ├── TemperatureRecord.h                  # Temperature data structure
+            │
+            ├── UserInput.h                          # User interaction interface
+            ├── UserInput.cpp                        # Input handling, menus, export    
+            │
+            └── weather_data_EU_1980-2019_temp_only.csv    # Required climate data file
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    Installation:
+        |--Compile the project:  g++ -std=c++17 -o temperature_analyzer *.cpp                                                
+        |                        ./temperature_analyzer
+        |
+        |--OR use the provided Makefile: bash make
+        |
+        |
+        |--Ensure the data file weather_data_EU_1980-2019_temp_only.csv is in the same directory as the executable.
+
+    Usage:
+        |--Run the application: ./temperature_analyzer
+        |
+        |--Follow the on-screen prompts to load data, apply filters, and view predictions.
+        |
+        |--Use the menu to select different operations like loading data, filtering, plotting, and predictions.
+        |
+        |--Export results to a CSV file if needed.
+
+
+    FILE Struture:
+
+    ;

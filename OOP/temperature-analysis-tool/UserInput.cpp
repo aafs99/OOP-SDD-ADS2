@@ -239,7 +239,7 @@ bool askForPredictions() {
     std::cout << "  • Moving Average: Stability confidence (based on volatility)\n";
     std::cout << "  • Momentum Model: Consistency confidence (trend reliability)\n";
     std::cout << "  • Cross-Validation: Model accuracy assessment (if sufficient data)\n";
-    std::cout << "  • Prediction Charts: Visual comparison of actual vs predicted (Figure 4 style)\n";
+    std::cout << "  • Prediction Charts: Visual comparison of actual vs predicted \n";
     
     return getYesNoInput("\nWould you like to generate enhanced temperature predictions? (y/n): ");
 }
@@ -351,7 +351,7 @@ bool askForPredictionChart() {
     std::cout << "\n=== PREDICTION COMPARISON CHART ===\n";
     std::cout << "Generate a visual chart comparing actual temperatures with predictions\n";
     std::cout << "from all three models across the historical period.\n";
-    std::cout << "\nThis creates 'Figure 4' style visualization showing:\n";
+    std::cout << "\nThis creates visualization showing:\n";
     std::cout << "• Actual temperatures (o)\n";
     std::cout << "• Linear model predictions (^)\n";
     std::cout << "• Moving average predictions (#)\n";
